@@ -21,9 +21,6 @@
 		DA5F51002EAA58C000AF7D48 /* SwiftSyntaxBuilder in Frameworks */ = {isa = PBXBuildFile; productRef = DA5F50FF2EAA58C000AF7D48 /* SwiftSyntaxBuilder */; };
 		DAE992E22A22A6F5007656B5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DAE992E12A22A6F5007656B5 /* Assets.xcassets */; };
 		DAE992E62A22A6F5007656B5 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DAE992E52A22A6F5007656B5 /* Preview Assets.xcassets */; };
-		DAE992F02A22A6F5007656B5 /* SwiftAVRGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE992EF2A22A6F5007656B5 /* SwiftAVRGeneratorTests.swift */; };
-		DAE992FA2A22A6F6007656B5 /* SwiftAVRGeneratorUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE992F92A22A6F6007656B5 /* SwiftAVRGeneratorUITests.swift */; };
-		DAE992FC2A22A6F6007656B5 /* SwiftAVRGeneratorUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE992FB2A22A6F6007656B5 /* SwiftAVRGeneratorUITestsLaunchTests.swift */; };
 		EE0C5E922F55DFB60053C834 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E902F55DFB50053C834 /* main.swift */; };
 		EECLI0032F600000000000001 /* AVRToolsDeviceFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3BB73F2A51E8F600C464C3 /* AVRToolsDeviceFile.swift */; };
 		EECLI0042F600000000000001 /* AVRVariants.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA53268B2AF7578B00D7D526 /* AVRVariants.swift */; };
@@ -68,10 +65,7 @@
 		DAE992E32A22A6F5007656B5 /* SwiftAVRGenerator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SwiftAVRGenerator.entitlements; sourceTree = "<group>"; };
 		DAE992E52A22A6F5007656B5 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		DAE992EB2A22A6F5007656B5 /* SwiftAVRGeneratorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftAVRGeneratorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		DAE992EF2A22A6F5007656B5 /* SwiftAVRGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftAVRGeneratorTests.swift; sourceTree = "<group>"; };
 		DAE992F52A22A6F6007656B5 /* SwiftAVRGeneratorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftAVRGeneratorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		DAE992F92A22A6F6007656B5 /* SwiftAVRGeneratorUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftAVRGeneratorUITests.swift; sourceTree = "<group>"; };
-		DAE992FB2A22A6F6007656B5 /* SwiftAVRGeneratorUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftAVRGeneratorUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		EE0C5E902F55DFB50053C834 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		EECLI0192F600000000000001 /* SwiftAVRGeneratorCLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SwiftAVRGeneratorCLI; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -82,7 +76,6 @@
 		EEE8AFB62F508D700080C89D /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = App; sourceTree = "<group>"; };
 		EEE8AFB72F508DB30080C89D /* Extensions */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Extensions; sourceTree = "<group>"; };
 		EEE8AFC02F508E4F0080C89D /* CodeGeneration */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = CodeGeneration; sourceTree = "<group>"; };
-		EEF6589F2F4E969400A32070 /* docs */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = docs; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,10 +139,7 @@
 		DAE992D12A22A6F4007656B5 = {
 			isa = PBXGroup;
 			children = (
-				EEF6589F2F4E969400A32070 /* docs */,
 				DAE992DC2A22A6F4007656B5 /* SwiftAVRGenerator */,
-				DAE992EE2A22A6F5007656B5 /* SwiftAVRGeneratorTests */,
-				DAE992F82A22A6F6007656B5 /* SwiftAVRGeneratorUITests */,
 				DAE992DB2A22A6F4007656B5 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -189,23 +179,6 @@
 				DAE992E52A22A6F5007656B5 /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
-			sourceTree = "<group>";
-		};
-		DAE992EE2A22A6F5007656B5 /* SwiftAVRGeneratorTests */ = {
-			isa = PBXGroup;
-			children = (
-				DAE992EF2A22A6F5007656B5 /* SwiftAVRGeneratorTests.swift */,
-			);
-			path = SwiftAVRGeneratorTests;
-			sourceTree = "<group>";
-		};
-		DAE992F82A22A6F6007656B5 /* SwiftAVRGeneratorUITests */ = {
-			isa = PBXGroup;
-			children = (
-				DAE992F92A22A6F6007656B5 /* SwiftAVRGeneratorUITests.swift */,
-				DAE992FB2A22A6F6007656B5 /* SwiftAVRGeneratorUITestsLaunchTests.swift */,
-			);
-			path = SwiftAVRGeneratorUITests;
 			sourceTree = "<group>";
 		};
 		EECLI0182F600000000000001 /* CLI */ = {
@@ -413,7 +386,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DAE992F02A22A6F5007656B5 /* SwiftAVRGeneratorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -421,8 +393,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DAE992FC2A22A6F6007656B5 /* SwiftAVRGeneratorUITestsLaunchTests.swift in Sources */,
-				DAE992FA2A22A6F6007656B5 /* SwiftAVRGeneratorUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
