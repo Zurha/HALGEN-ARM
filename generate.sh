@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# generate.sh — Build and run the HALGEN SVD decoder
+# generate.sh — Build and run the HALGEN SVD generator
 #
 # Usage:
 #   ./generate.sh [CLI args...]
@@ -16,7 +16,7 @@ DERIVED_DATA="$SCRIPT_DIR/.build"
 BINARY="$DERIVED_DATA/Build/Products/Release/$SCHEME"
 BUILD_LOG="$(mktemp)"
 
-printf "\033[1mHALGEN\033[0m — SVD Decoder\n\n"
+printf "\033[1mHALGEN\033[0m — SVD Generator\n\n"
 
 printf "  Building... "
 if xcodebuild \
