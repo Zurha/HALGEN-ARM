@@ -23,6 +23,7 @@ struct WDTGenerator {
     }
 
     private func render(device: SVDDevice, peripheral: SVDPeripheral, baseAddress: UInt64) -> String {
+        let timeoutPeriodField = field(named: "PER", inRegister: "CONFIG", peripheral: peripheral)
         var lines: [String] = [
             "//",
             "//  WDT.swift",
@@ -49,6 +50,17 @@ struct WDTGenerator {
             lines.append("    public static let interruptName = \(swiftStringLiteral(interruptName))")
         }
 
+        lines.append("")
+        lines.append(contentsOf: renderRegisterAccessHelpers())
+
+        if let timeoutPeriodField {
+            lines.append("")
+            lines.append(contentsOf: renderTimeoutPeriodEnum(from: timeoutPeriodField))
+        }
+
+        lines.append("")
+        lines.append(contentsOf: renderHighLevelAPI())
+
         for register in peripheral.registers.sorted(by: registerSort) {
             lines.append("")
             lines.append(contentsOf: renderRegister(register, defaultAccess: effectiveDeviceAccess(for: device)))
@@ -58,6 +70,213 @@ struct WDTGenerator {
         lines.append("")
 
         return lines.joined(separator: "\n")
+    }
+
+    private func renderRegisterAccessHelpers() -> [String] {
+        [
+            "    @inline(__always)",
+            "    private static func pointer(at offset: UInt32) -> UnsafeMutablePointer<UInt8> {",
+            "        let address = Int(baseAddress + offset)",
+            "        guard let pointer = UnsafeMutablePointer<UInt8>(bitPattern: address) else {",
+            "            preconditionFailure(\"Invalid WDT register address: \\(address)\")",
+            "        }",
+            "",
+            "        return pointer",
+            "    }",
+            "",
+            "    @inline(__always)",
+            "    private static func readRegister(at offset: UInt32) -> UInt8 {",
+            "        pointer(at: offset).pointee",
+            "    }",
+            "",
+            "    @inline(__always)",
+            "    private static func writeRegister(_ value: UInt8, at offset: UInt32) {",
+            "        pointer(at: offset).pointee = value",
+            "    }",
+            "",
+            "    @inline(__always)",
+            "    @discardableResult",
+            "    private static func modifyRegister(at offset: UInt32, _ transform: (UInt8) -> UInt8) -> UInt8 {",
+            "        let newValue = transform(readRegister(at: offset))",
+            "        writeRegister(newValue, at: offset)",
+            "        return newValue",
+            "    }",
+            "",
+            "    @inline(__always)",
+            "    private static func readBit(mask: UInt8, at offset: UInt32) -> Bool {",
+            "        (readRegister(at: offset) & mask) != 0",
+            "    }",
+            "",
+            "    @inline(__always)",
+            "    private static func writeBit(mask: UInt8, at offset: UInt32, enabled: Bool) {",
+            "        modifyRegister(at: offset) { currentValue in",
+            "            enabled ? (currentValue | mask) : (currentValue & ~mask)",
+            "        }",
+            "    }",
+            "",
+            "    @inline(__always)",
+            "    private static func readField(mask: UInt8, shift: UInt8, at offset: UInt32) -> UInt8 {",
+            "        (readRegister(at: offset) & mask) >> shift",
+            "    }",
+            "",
+            "    @inline(__always)",
+            "    private static func writeField(mask: UInt8, shift: UInt8, value: UInt8, at offset: UInt32) {",
+            "        let shiftedValue = (value << shift) & mask",
+            "        modifyRegister(at: offset) { currentValue in",
+            "            (currentValue & ~mask) | shiftedValue",
+            "        }",
+            "    }",
+        ]
+    }
+
+    private func renderTimeoutPeriodEnum(from field: SVDField) -> [String] {
+        guard let values = field.enumeratedValues.first?.values, values.isEmpty == false else {
+            return []
+        }
+
+        var lines = [
+            "    /// Available watchdog timeout periods.",
+            "    public enum TimeoutPeriod: UInt8, CaseIterable {",
+        ]
+
+        for value in values {
+            let caseName = timeoutCaseName(for: value)
+
+            if let description = value.description, description.isEmpty == false {
+                lines.append("        /// \(description)")
+            }
+
+            let literal = value.value.map { hexLiteral($0, bitWidth: 8) } ?? (value.rawValue ?? "0")
+            lines.append("        case \(caseName) = \(literal)")
+        }
+
+        lines.append("    }")
+        lines.append("")
+        lines.append("    public typealias WindowPeriod = TimeoutPeriod")
+        lines.append("    public typealias EarlyWarningOffset = TimeoutPeriod")
+
+        return lines
+    }
+
+    private func renderHighLevelAPI() -> [String] {
+        [
+            "    /// Raw access to the CTRL register.",
+            "    public static var control: UInt8 {",
+            "        get { readRegister(at: Ctrl.offset) }",
+            "        set { writeRegister(newValue, at: Ctrl.offset) }",
+            "    }",
+            "",
+            "    /// Raw access to the CONFIG register.",
+            "    public static var configuration: UInt8 {",
+            "        get { readRegister(at: Config.offset) }",
+            "        set { writeRegister(newValue, at: Config.offset) }",
+            "    }",
+            "",
+            "    /// Raw access to the EWCTRL register.",
+            "    public static var earlyWarningControl: UInt8 {",
+            "        get { readRegister(at: Ewctrl.offset) }",
+            "        set { writeRegister(newValue, at: Ewctrl.offset) }",
+            "    }",
+            "",
+            "    /// Raw access to the STATUS register.",
+            "    public static var status: UInt8 {",
+            "        readRegister(at: Status.offset)",
+            "    }",
+            "",
+            "    /// Indicates whether the watchdog is synchronizing with the clock domain.",
+            "    public static var isSynchronizing: Bool {",
+            "        readBit(mask: Status.Syncbusy.mask, at: Status.offset)",
+            "    }",
+            "",
+            "    /// Waits until the watchdog peripheral is no longer synchronizing.",
+            "    public static func waitForSynchronization() {",
+            "        while isSynchronizing {}",
+            "    }",
+            "",
+            "    public static var isEnabled: Bool {",
+            "        get { readBit(mask: Ctrl.Enable.mask, at: Ctrl.offset) }",
+            "        set { writeBit(mask: Ctrl.Enable.mask, at: Ctrl.offset, enabled: newValue) }",
+            "    }",
+            "",
+            "    public static var isWindowModeEnabled: Bool {",
+            "        get { readBit(mask: Ctrl.Wen.mask, at: Ctrl.offset) }",
+            "        set { writeBit(mask: Ctrl.Wen.mask, at: Ctrl.offset, enabled: newValue) }",
+            "    }",
+            "",
+            "    public static var isAlwaysOn: Bool {",
+            "        get { readBit(mask: Ctrl.Alwayson.mask, at: Ctrl.offset) }",
+            "        set { writeBit(mask: Ctrl.Alwayson.mask, at: Ctrl.offset, enabled: newValue) }",
+            "    }",
+            "",
+            "    public static var timeoutPeriod: TimeoutPeriod {",
+            "        get { TimeoutPeriod(rawValue: readField(mask: Config.Per.mask, shift: Config.Per.offset, at: Config.offset)) ?? .cycles16384 }",
+            "        set { writeField(mask: Config.Per.mask, shift: Config.Per.offset, value: newValue.rawValue, at: Config.offset) }",
+            "    }",
+            "",
+            "    public static var windowPeriod: WindowPeriod {",
+            "        get { WindowPeriod(rawValue: readField(mask: Config.Window.mask, shift: Config.Window.offset, at: Config.offset)) ?? .cycles16384 }",
+            "        set { writeField(mask: Config.Window.mask, shift: Config.Window.offset, value: newValue.rawValue, at: Config.offset) }",
+            "    }",
+            "",
+            "    public static var earlyWarningOffset: EarlyWarningOffset {",
+            "        get { EarlyWarningOffset(rawValue: readField(mask: Ewctrl.Ewoffset.mask, shift: Ewctrl.Ewoffset.offset, at: Ewctrl.offset)) ?? .cycles16384 }",
+            "        set { writeField(mask: Ewctrl.Ewoffset.mask, shift: Ewctrl.Ewoffset.offset, value: newValue.rawValue, at: Ewctrl.offset) }",
+            "    }",
+            "",
+            "    /// Configures the watchdog timeout and optional window-mode/early-warning periods.",
+            "    public static func configure(",
+            "        period: TimeoutPeriod,",
+            "        windowPeriod: WindowPeriod? = nil,",
+            "        earlyWarningOffset: EarlyWarningOffset? = nil",
+            "    ) {",
+            "        timeoutPeriod = period",
+            "",
+            "        if let windowPeriod {",
+            "            self.windowPeriod = windowPeriod",
+            "        }",
+            "",
+            "        if let earlyWarningOffset {",
+            "            self.earlyWarningOffset = earlyWarningOffset",
+            "        }",
+            "    }",
+            "",
+            "    /// Enables the watchdog with optional window mode and always-on behavior.",
+            "    public static func enable(windowMode: Bool = false, alwaysOn: Bool = false) {",
+            "        isWindowModeEnabled = windowMode",
+            "        isAlwaysOn = alwaysOn",
+            "        isEnabled = true",
+            "    }",
+            "",
+            "    /// Disables the watchdog if the configuration allows it.",
+            "    public static func disable() {",
+            "        isEnabled = false",
+            "    }",
+            "",
+            "    /// Clears the watchdog counter using the hardware clear key.",
+            "    public static func clear() {",
+            "        writeRegister(Clear.Clear.Values.key.rawValue, at: Clear.offset)",
+            "    }",
+            "",
+            "    /// Enables the early warning interrupt.",
+            "    public static func enableEarlyWarningInterrupt() {",
+            "        writeRegister(Intenset.Ew.mask, at: Intenset.offset)",
+            "    }",
+            "",
+            "    /// Disables the early warning interrupt.",
+            "    public static func disableEarlyWarningInterrupt() {",
+            "        writeRegister(Intenclr.Ew.mask, at: Intenclr.offset)",
+            "    }",
+            "",
+            "    /// Indicates whether the early warning interrupt flag is set.",
+            "    public static var hasEarlyWarningInterrupt: Bool {",
+            "        readBit(mask: Intflag.Ew.mask, at: Intflag.offset)",
+            "    }",
+            "",
+            "    /// Clears the early warning interrupt flag.",
+            "    public static func clearEarlyWarningInterruptFlag() {",
+            "        writeRegister(Intflag.Ew.mask, at: Intflag.offset)",
+            "    }",
+        ]
     }
 
     private func renderRegister(_ register: SVDRegister, defaultAccess: String) -> [String] {
@@ -140,6 +359,32 @@ struct WDTGenerator {
 
         lines.append("            }")
         return lines
+    }
+
+    private func field(named fieldName: String, inRegister registerName: String, peripheral: SVDPeripheral) -> SVDField? {
+        peripheral.registers
+            .first(where: { $0.name == registerName })?
+            .fields
+            .first(where: { $0.name == fieldName })
+    }
+
+    private func timeoutCaseName(for value: SVDEnumeratedValue) -> String {
+        if let description = value.description,
+           let cycleCount = leadingInteger(in: description),
+           description.lowercased().contains("clock cycle") {
+            return "cycles\(cycleCount)"
+        }
+
+        return sanitizedCaseName(value.name, fallbackValue: value.value, fallbackDescription: value.description)
+    }
+
+    private func leadingInteger(in value: String) -> Int? {
+        let digits = value.prefix { $0.isNumber }
+        guard digits.isEmpty == false else {
+            return nil
+        }
+
+        return Int(digits)
     }
 
     private func effectiveDeviceAccess(for device: SVDDevice) -> String {
