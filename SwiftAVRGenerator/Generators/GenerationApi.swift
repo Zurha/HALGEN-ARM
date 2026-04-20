@@ -342,8 +342,6 @@ func exportFile(toURL: URL, fileName: String, fileContents: String) {
     }
 }
 
-var listOfValues: [String] = []
-
 private extension URL {
     func appendingRelativeDirectory(for relativePath: String) -> URL {
         relativePath
@@ -352,12 +350,5 @@ private extension URL {
             .reduce(self) { url, component in
                 url.appendingPathComponent(String(component), isDirectory: true)
             }
-    }
-}
-
-extension Sequence where Iterator.Element: Hashable {
-    func unique() -> [Iterator.Element] {
-        var seen: [Iterator.Element: Bool] = [:]
-        return self.filter { seen.updateValue(true, forKey: $0) == nil }
     }
 }

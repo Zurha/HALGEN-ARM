@@ -7,101 +7,133 @@
 
 import Foundation
 
+struct CLIOptions {
+    var input: URL?
+    var output: URL?
+    var generateAll = false
+    var inferValueTypes = false
+    var showHelp = false
+}
+
+enum CLIError: Error {
+    case missingValue(flag: String)
+    case unknownArgument(String)
+    case inputNotFound(String)
+
+    var message: String {
+        switch self {
+        case let .missingValue(flag):
+            return "error: \(flag) requires a path argument"
+        case let .unknownArgument(argument):
+            return "error: unknown argument '\(argument)'"
+        case let .inputNotFound(path):
+            return "error: input path not found at \(path)"
+        }
+    }
+}
+
 func projectRoot() -> URL {
     let binary = URL(fileURLWithPath: CommandLine.arguments[0]).standardized
-    // Try to find the project root by walking up until we find SwiftAVRGenerator.xcodeproj
     var candidate = binary.deletingLastPathComponent()
+
     for _ in 0..<10 {
-        let probe = candidate.appendingPathComponent("SwiftAVRGenerator.xcodeproj")
-        if FileManager.default.fileExists(atPath: probe.path) {
+        let project = candidate.appendingPathComponent("SwiftAVRGenerator.xcodeproj")
+        if FileManager.default.fileExists(atPath: project.path) {
             return candidate
         }
+
         candidate = candidate.deletingLastPathComponent()
     }
-    // Fallback: current working directory
+
     return URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 }
 
-var generateAll = false
-var outputOverride: URL? = nil
-var inferValueTypes = false
+func printUsage(executableName: String) {
+    print(
+        """
+        Usage: \(executableName) [--input <path>] [--output <path>] [--all] [--infer-value-types]
 
-var args = CommandLine.arguments.dropFirst()
-var argsIterator = args.makeIterator()
-
-while let arg = argsIterator.next() {
-    switch arg {
-    case "--all":
-        generateAll = true
-    case "--output":
-        if let path = argsIterator.next() {
-            outputOverride = URL(fileURLWithPath: path, isDirectory: true)
-        } else {
-            fputs("error: --output requires a path argument\n", stderr)
-            exit(1)
-        }
-    case "--infer-value-types":
-        inferValueTypes = true
-    case "--help", "-h":
-        print("""
-        Usage: SwiftAVRGeneratorCLI [--all] [--output <path>] [--infer-value-types]
-
-          --all                  Generate for all chips in atdf/
-                                 (default: ATmega328P only)
-          --output <path>        Output directory
+          --input <path>         Device description file or directory to process
+          --output <path>        Output directory for generated code
                                  (default: <project>/Output/)
-          --infer-value-types    Infer Bool/UInt8 from bitfield width
-                                 (default: off, requires explicit valueType in docs)
-        """)
+          --all                  Legacy compatibility flag, currently a no-op
+          --infer-value-types    Legacy compatibility flag, currently a no-op
+          --help, -h             Show this help message
+
+        Status:
+          The AVR-specific generation flow has been removed.
+          This CLI is now a neutral scaffold for future ARM work.
+        """
+    )
+}
+
+func parseArguments() throws -> CLIOptions {
+    var options = CLIOptions()
+    var iterator = CommandLine.arguments.dropFirst().makeIterator()
+
+    while let argument = iterator.next() {
+        switch argument {
+        case "--input":
+            guard let path = iterator.next() else {
+                throw CLIError.missingValue(flag: "--input")
+            }
+
+            options.input = URL(fileURLWithPath: path)
+        case "--output":
+            guard let path = iterator.next() else {
+                throw CLIError.missingValue(flag: "--output")
+            }
+
+            options.output = URL(fileURLWithPath: path, isDirectory: true)
+        case "--all":
+            options.generateAll = true
+        case "--infer-value-types":
+            options.inferValueTypes = true
+        case "--help", "-h":
+            options.showHelp = true
+        default:
+            throw CLIError.unknownArgument(argument)
+        }
+    }
+
+    if let input = options.input, !FileManager.default.fileExists(atPath: input.path) {
+        throw CLIError.inputNotFound(input.path)
+    }
+
+    return options
+}
+
+func printScaffoldStatus(root: URL, options: CLIOptions) {
+    let output = options.output ?? root.appendingPathComponent("Output", isDirectory: true)
+
+    print("Project root : \(root.path)")
+    print("Input path   : \(options.input?.path ?? "(not set)")")
+    print("Output dir   : \(output.path)")
+
+    if options.generateAll || options.inferValueTypes {
+        print("Compatibility: accepted legacy AVR flags for transition cleanup")
+    }
+
+    print()
+    print("HALGEN is now in scaffold mode.")
+    print("No parser or code generation pipeline is configured yet.")
+    print("Next step: add an ARM device-description loader and register new generators.")
+}
+
+do {
+    let options = try parseArguments()
+
+    if options.showHelp {
+        printUsage(executableName: URL(fileURLWithPath: CommandLine.arguments[0]).lastPathComponent)
         exit(0)
-    default:
-        fputs("error: unknown argument '\(arg)'\n", stderr)
-        exit(1)
     }
-}
 
-let root = projectRoot()
-let docsURL = root.appendingPathComponent("docs", isDirectory: true)
-let archURL = root.appendingPathComponent("atdf", isDirectory: true)
-let outputURL = outputOverride ?? root.appendingPathComponent("Output", isDirectory: true)
-
-let atdfURLs: [URL]
-
-if generateAll {
-    do {
-        let contents = try FileManager.default.contentsOfDirectory(
-            at: archURL,
-            includingPropertiesForKeys: nil,
-            options: .skipsHiddenFiles
-        )
-        atdfURLs = contents
-            .filter { $0.pathExtension.lowercased() == "atdf" }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
-    } catch {
-        fputs("error: could not read atdf/ directory at \(archURL.path): \(error)\n", stderr)
-        exit(1)
-    }
-} else {
-    let defaultATDF = archURL.appendingPathComponent("ATmega328P.atdf")
-    guard FileManager.default.fileExists(atPath: defaultATDF.path) else {
-        fputs("error: default ATDF not found at \(defaultATDF.path)\n", stderr)
-        exit(1)
-    }
-    atdfURLs = [defaultATDF]
-}
-
-guard FileManager.default.fileExists(atPath: docsURL.path) else {
-    fputs("error: docs/ directory not found at \(docsURL.path)\n", stderr)
+    printScaffoldStatus(root: projectRoot(), options: options)
+} catch let error as CLIError {
+    fputs("\(error.message)\n", stderr)
+    fputs("Run with --help to see the available options.\n", stderr)
+    exit(1)
+} catch {
+    fputs("error: \(error.localizedDescription)\n", stderr)
     exit(1)
 }
-
-print("Project root : \(root.path)")
-print("Docs dir     : \(docsURL.path)")
-print("Output dir   : \(outputURL.path)")
-print("Chips        : \(atdfURLs.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: ", "))")
-print()
-
-exportAll(fromURLs: atdfURLs, toURL: outputURL, docURL: docsURL, inferValueTypes: inferValueTypes)
-
-print()
-print("Done. Output written to: \(outputURL.path)")
