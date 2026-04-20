@@ -19,6 +19,7 @@ enum CLIError: Error {
     case missingValue(flag: String)
     case unknownArgument(String)
     case inputNotFound(String)
+    case noSVDFilesFound(String)
 
     var message: String {
         switch self {
@@ -28,8 +29,15 @@ enum CLIError: Error {
             return "error: unknown argument '\(argument)'"
         case let .inputNotFound(path):
             return "error: input path not found at \(path)"
+        case let .noSVDFilesFound(path):
+            return "error: no .svd files found at \(path)"
         }
     }
+}
+
+struct DecodedSVDFile {
+    let url: URL
+    let device: SVDDevice
 }
 
 func projectRoot() -> URL {
@@ -53,16 +61,15 @@ func printUsage(executableName: String) {
         """
         Usage: \(executableName) [--input <path>] [--output <path>] [--all] [--infer-value-types]
 
-          --input <path>         Device description file or directory to process
-          --output <path>        Output directory for generated code
-                                 (default: <project>/Output/)
+          --input <path>         SVD file or directory to decode
+                                 (default: <project>/SVDs/)
+          --output <path>        Reserved for future code generation output
           --all                  Legacy compatibility flag, currently a no-op
           --infer-value-types    Legacy compatibility flag, currently a no-op
           --help, -h             Show this help message
 
         Status:
-          The AVR-specific generation flow has been removed.
-          This CLI is now a neutral scaffold for future ARM work.
+          HALGEN currently decodes CMSIS-SVD input and reports the parsed device structure.
         """
     )
 }
@@ -103,21 +110,104 @@ func parseArguments() throws -> CLIOptions {
     return options
 }
 
-func printScaffoldStatus(root: URL, options: CLIOptions) {
-    let output = options.output ?? root.appendingPathComponent("Output", isDirectory: true)
+func collectSVDURLs(from url: URL) throws -> [URL] {
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
+        throw CLIError.inputNotFound(url.path)
+    }
 
+    if isDirectory.boolValue == false {
+        guard url.pathExtension.lowercased() == "svd" else {
+            throw CLIError.noSVDFilesFound(url.path)
+        }
+
+        return [url]
+    }
+
+    guard let enumerator = FileManager.default.enumerator(
+        at: url,
+        includingPropertiesForKeys: [.isRegularFileKey],
+        options: [.skipsHiddenFiles]
+    ) else {
+        throw CLIError.noSVDFilesFound(url.path)
+    }
+
+    var svdURLs: [URL] = []
+
+    for case let fileURL as URL in enumerator {
+        guard fileURL.pathExtension.lowercased() == "svd" else {
+            continue
+        }
+
+        svdURLs.append(fileURL)
+    }
+
+    svdURLs.sort { $0.path < $1.path }
+
+    guard svdURLs.isEmpty == false else {
+        throw CLIError.noSVDFilesFound(url.path)
+    }
+
+    return svdURLs
+}
+
+func decodeSVDs(at urls: [URL]) throws -> [DecodedSVDFile] {
+    let decoder = SVDDecoder()
+
+    return try urls.map { url in
+        let device = try decoder.decode(contentsOf: url)
+        return DecodedSVDFile(url: url, device: device)
+    }
+}
+
+func printReport(for decodedFiles: [DecodedSVDFile], inputURL: URL, options: CLIOptions, root: URL) {
     print("Project root : \(root.path)")
-    print("Input path   : \(options.input?.path ?? "(not set)")")
-    print("Output dir   : \(output.path)")
+    print("Input path   : \(inputURL.path)")
+
+    if let output = options.output {
+        print("Output dir   : \(output.path) (reserved for future generation)")
+    }
 
     if options.generateAll || options.inferValueTypes {
         print("Compatibility: accepted legacy AVR flags for transition cleanup")
     }
 
     print()
-    print("HALGEN is now in scaffold mode.")
-    print("No parser or code generation pipeline is configured yet.")
-    print("Next step: add an ARM device-description loader and register new generators.")
+
+    for decoded in decodedFiles {
+        let device = decoded.device
+        print("Decoded \(decoded.url.lastPathComponent)")
+        print("  Device      : \(device.name)")
+
+        if let cpuName = device.cpu?.name {
+            print("  CPU         : \(cpuName)")
+        }
+
+        print("  Peripherals : \(device.peripheralCount)")
+        print("  Interrupts  : \(device.interruptCount)")
+        print("  Registers   : \(device.registerCount)")
+        print("  Clusters    : \(device.clusterCount)")
+        print("  Fields      : \(device.fieldCount)")
+        print()
+    }
+
+    if decodedFiles.count > 1 {
+        let totals = decodedFiles.reduce(into: (peripherals: 0, interrupts: 0, registers: 0, clusters: 0, fields: 0)) { totals, decoded in
+            totals.peripherals += decoded.device.peripheralCount
+            totals.interrupts += decoded.device.interruptCount
+            totals.registers += decoded.device.registerCount
+            totals.clusters += decoded.device.clusterCount
+            totals.fields += decoded.device.fieldCount
+        }
+
+        print("Totals")
+        print("  Files       : \(decodedFiles.count)")
+        print("  Peripherals : \(totals.peripherals)")
+        print("  Interrupts  : \(totals.interrupts)")
+        print("  Registers   : \(totals.registers)")
+        print("  Clusters    : \(totals.clusters)")
+        print("  Fields      : \(totals.fields)")
+    }
 }
 
 do {
@@ -128,7 +218,12 @@ do {
         exit(0)
     }
 
-    printScaffoldStatus(root: projectRoot(), options: options)
+    let root = projectRoot()
+    let inputURL = options.input ?? root.appendingPathComponent("SVDs", isDirectory: true)
+    let svdURLs = try collectSVDURLs(from: inputURL)
+    let decodedFiles = try decodeSVDs(at: svdURLs)
+
+    printReport(for: decodedFiles, inputURL: inputURL, options: options, root: root)
 } catch let error as CLIError {
     fputs("\(error.message)\n", stderr)
     fputs("Run with --help to see the available options.\n", stderr)

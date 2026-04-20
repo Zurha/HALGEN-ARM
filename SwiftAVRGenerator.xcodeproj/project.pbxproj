@@ -8,10 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		EE0C5E922F55DFB60053C834 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E902F55DFB50053C834 /* main.swift */; };
+		EE0C5E942F55DFB60053C834 /* SVD.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E932F55DFB60053C834 /* SVD.swift */; };
+		EE0C5E962F55DFB60053C834 /* SVDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E952F55DFB60053C834 /* SVDDecoder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		EE0C5E902F55DFB50053C834 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		EE0C5E932F55DFB60053C834 /* SVD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVD.swift; sourceTree = "<group>"; };
+		EE0C5E952F55DFB60053C834 /* SVDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVDDecoder.swift; sourceTree = "<group>"; };
 		EECLI0192F600000000000001 /* SwiftAVRGeneratorCLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SwiftAVRGeneratorCLI; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -56,9 +60,19 @@
 				EEE8AFB72F508DB30080C89D /* Extensions */,
 				EEE8AF9C2F5050860080C89D /* Generators */,
 				EE96A6502F4E7B5F00542FFD /* Documentation */,
+				EE0C5E972F55DFB60053C834 /* SVD */,
 				EECLI0182F600000000000001 /* CLI */,
 			);
 			path = SwiftAVRGenerator;
+			sourceTree = "<group>";
+		};
+		EE0C5E972F55DFB60053C834 /* SVD */ = {
+			isa = PBXGroup;
+			children = (
+				EE0C5E932F55DFB60053C834 /* SVD.swift */,
+				EE0C5E952F55DFB60053C834 /* SVDDecoder.swift */,
+			);
+			path = SVD;
 			sourceTree = "<group>";
 		};
 		EECLI0182F600000000000001 /* CLI */ = {
@@ -131,6 +145,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				EE0C5E922F55DFB60053C834 /* main.swift in Sources */,
+				EE0C5E942F55DFB60053C834 /* SVD.swift in Sources */,
+				EE0C5E962F55DFB60053C834 /* SVDDecoder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
