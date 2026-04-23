@@ -4,14 +4,14 @@
 # Usage:
 #   ./generate.sh [CLI args...]
 #
-# The script builds the `SwiftAVRGeneratorCLI` target and forwards any
+# The script builds the `SwiftARMGeneratorCLI` target and forwards any
 # additional arguments to the resulting executable.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT="$SCRIPT_DIR/SwiftAVRGenerator.xcodeproj"
-SCHEME="SwiftAVRGeneratorCLI"
+PROJECT="$SCRIPT_DIR/SwiftARMGenerator.xcodeproj"
+SCHEME="SwiftARMGeneratorCLI"
 DERIVED_DATA="$SCRIPT_DIR/.build"
 BINARY="$DERIVED_DATA/Build/Products/Release/$SCHEME"
 BUILD_LOG="$(mktemp)"
