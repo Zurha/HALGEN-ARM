@@ -70,7 +70,7 @@ func printUsage(executableName: String) {
           --help, -h             Show this help message
 
         Status:
-          HALGEN currently decodes CMSIS-SVD input and generates a WDT peripheral proof of concept.
+          HALGEN currently decodes CMSIS-SVD input without emitting peripheral Swift files.
         """
     )
 }

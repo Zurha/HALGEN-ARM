@@ -11,7 +11,6 @@
 		EE0C5E942F55DFB60053C834 /* SVD.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E932F55DFB60053C834 /* SVD.swift */; };
 		EE0C5E962F55DFB60053C834 /* SVDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E952F55DFB60053C834 /* SVDDecoder.swift */; };
 		EE0C5E992F55DFB60053C834 /* SVDCodeGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E982F55DFB60053C834 /* SVDCodeGenerator.swift */; };
-		EE0C5E9B2F55DFB60053C834 /* WDTGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E9A2F55DFB60053C834 /* WDTGenerator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,7 +18,6 @@
 		EE0C5E932F55DFB60053C834 /* SVD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVD.swift; sourceTree = "<group>"; };
 		EE0C5E952F55DFB60053C834 /* SVDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVDDecoder.swift; sourceTree = "<group>"; };
 		EE0C5E982F55DFB60053C834 /* SVDCodeGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVDCodeGenerator.swift; sourceTree = "<group>"; };
-		EE0C5E9A2F55DFB60053C834 /* WDTGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WDTGenerator.swift; sourceTree = "<group>"; };
 		EECLI0192F600000000000001 /* SwiftARMGeneratorCLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SwiftARMGeneratorCLI; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -84,7 +82,6 @@
 			isa = PBXGroup;
 			children = (
 				EE0C5E982F55DFB60053C834 /* SVDCodeGenerator.swift */,
-				EE0C5E9A2F55DFB60053C834 /* WDTGenerator.swift */,
 			);
 			path = SVDGeneration;
 			sourceTree = "<group>";
@@ -162,7 +159,6 @@
 				EE0C5E942F55DFB60053C834 /* SVD.swift in Sources */,
 				EE0C5E962F55DFB60053C834 /* SVDDecoder.swift in Sources */,
 				EE0C5E992F55DFB60053C834 /* SVDCodeGenerator.swift in Sources */,
-				EE0C5E9B2F55DFB60053C834 /* WDTGenerator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

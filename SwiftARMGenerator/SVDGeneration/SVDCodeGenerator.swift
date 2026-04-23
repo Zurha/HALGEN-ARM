@@ -20,13 +20,7 @@ struct GeneratedDeviceOutput {
 
 struct SVDCodeGenerator {
     func generate(for decodedFile: DecodedSVDFile) -> GeneratedDeviceOutput {
-        var files: [GeneratedSwiftFile] = []
-
-        if let wdtFile = WDTGenerator().generate(device: decodedFile.device) {
-            files.append(wdtFile)
-        }
-
-        return GeneratedDeviceOutput(url: decodedFile.url, device: decodedFile.device, files: files)
+        GeneratedDeviceOutput(url: decodedFile.url, device: decodedFile.device, files: [])
     }
 }
 
