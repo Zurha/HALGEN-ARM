@@ -7,10 +7,6 @@
 
 struct GeneratorRegistry {
     static let allGenerators: [PeripheralGenerator] = [
-        UARTGenerator(),
-        SPIGenerator(),
-        TimerGenerator(),
-        ADCGenerator(),
-        GPIOGenerator()
+
     ]
 }
