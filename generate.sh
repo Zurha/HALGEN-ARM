@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
-# generate.sh — Build and run the HALGEN code generator
+# generate.sh — Build and run the HALGEN SVD generator
 #
 # Usage:
-#   ./generate.sh [--all] [--output <path>]
+#   ./generate.sh [CLI args...]
 #
-#   (no args)          Generate for ATmega328P → Output/
-#   --all              Generate for all chips in atdf/ → Output/
-#   --output <path>    Override output directory
+# The script builds the `SwiftARMGeneratorCLI` target and forwards any
+# additional arguments to the resulting executable.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT="$SCRIPT_DIR/SwiftAVRGenerator.xcodeproj"
-SCHEME="SwiftAVRGeneratorCLI"
+PROJECT="$SCRIPT_DIR/SwiftARMGenerator.xcodeproj"
+SCHEME="SwiftARMGeneratorCLI"
 DERIVED_DATA="$SCRIPT_DIR/.build"
 BINARY="$DERIVED_DATA/Build/Products/Release/$SCHEME"
 BUILD_LOG="$(mktemp)"
 
-printf "\033[1mHALGEN\033[0m — Swift HAL Generator\n\n"
+printf "\033[1mHALGEN\033[0m — SVD Generator\n\n"
 
 printf "  Building... "
 if xcodebuild \
