@@ -15,6 +15,7 @@
 		EEA200000000000000000003 /* GeneratorRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000003 /* GeneratorRegistry.swift */; };
 		EEA200000000000000000004 /* PeripheralGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000004 /* PeripheralGenerator.swift */; };
 		EEA200000000000000000005 /* GPIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000005 /* GPIO.swift */; };
+		EEA200000000000000000006 /* SERCOM.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000006 /* SERCOM.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		EEA100000000000000000003 /* GeneratorRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/GeneratorRegistry.swift; sourceTree = SOURCE_ROOT; };
 		EEA100000000000000000004 /* PeripheralGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/PeripheralGenerator.swift; sourceTree = SOURCE_ROOT; };
 		EEA100000000000000000005 /* GPIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/Peripherals/GPIO.swift; sourceTree = SOURCE_ROOT; };
+		EEA100000000000000000006 /* SERCOM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/Peripherals/SERCOM.swift; sourceTree = SOURCE_ROOT; };
 		EECLI0192F600000000000001 /* SwiftARMGeneratorCLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SwiftARMGeneratorCLI; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -162,6 +164,7 @@
 				EEA200000000000000000003 /* GeneratorRegistry.swift in Sources */,
 				EEA200000000000000000004 /* PeripheralGenerator.swift in Sources */,
 				EEA200000000000000000005 /* GPIO.swift in Sources */,
+				EEA200000000000000000006 /* SERCOM.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

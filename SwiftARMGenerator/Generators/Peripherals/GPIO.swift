@@ -48,6 +48,7 @@ private func buildGPIO(device: SVDDevice, peripheral: SVDPeripheral, subdirector
     code += """
 
     struct GPIO {
+        private init() {}
 
     """
 
@@ -129,7 +130,8 @@ private func isPortGroupRegister(_ register: SVDRegister) -> Bool {
 
 private func buildPortGroup(name portName: String, groupIndex: Int, registers: [SVDRegister]) -> String {
     var code = """
-        enum \(portName): AtomicPort {
+        struct \(portName): AtomicPort {
+            private init() {}
 
     """
 
