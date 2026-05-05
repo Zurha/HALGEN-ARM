@@ -1,0 +1,4 @@
+module CoreARM {
+    umbrella header "CoreARM.h"
+    export *
+}

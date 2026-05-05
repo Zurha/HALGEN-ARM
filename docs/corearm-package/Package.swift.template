@@ -1,0 +1,29 @@
+// swift-tools-version:5.9
+import PackageDescription
+
+let package = Package(
+    name: "CoreARM",
+    products: [
+        .library(name: "CoreARM", targets: ["CoreARM"]),
+    ],
+    targets: [
+        .target(
+            name: "CoreARM",
+            path: "Sources",
+            exclude: [],
+            sources: nil,
+            publicHeadersPath: nil,
+            cSettings: nil,
+            cxxSettings: nil,
+            swiftSettings: [
+                .enableExperimentalFeature("Embedded"),
+                .enableExperimentalFeature("Volatile"),
+                .unsafeFlags([
+                    "-Xfrontend", "-disable-objc-interop",
+                    "-Xfrontend", "-disable-objc-attr-requires-foundation-module",
+                ])
+            ],
+            linkerSettings: nil
+        )
+    ]
+)

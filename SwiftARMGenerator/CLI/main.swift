@@ -70,7 +70,7 @@ func printUsage(executableName: String) {
           --help, -h             Show this help message
 
         Status:
-          HALGEN currently decodes CMSIS-SVD input without emitting peripheral Swift files.
+          HALGEN decodes CMSIS-SVD input and emits selected peripheral Swift files.
         """
     )
 }
@@ -189,7 +189,7 @@ func printReport(for generatedOutputs: [GeneratedDeviceOutput], inputURL: URL, o
         print("  Generated   : \(generatedOutput.files.count)")
 
         for file in generatedOutput.files {
-            print("    \(file.relativePath)")
+            print("    \(generatedOutput.relativePath(for: file))")
         }
 
         print()
@@ -222,7 +222,9 @@ func printReport(for generatedOutputs: [GeneratedDeviceOutput], inputURL: URL, o
 }
 
 func generateOutputs(from decodedFiles: [DecodedSVDFile]) -> [GeneratedDeviceOutput] {
-    let generator = SVDCodeGenerator()
+    let generator = SVDCodeGenerator(
+        documentationDirectory: projectRoot().appendingPathComponent("docs", isDirectory: true)
+    )
 
     return decodedFiles.map { decodedFile in
         generator.generate(for: decodedFile)
@@ -231,7 +233,7 @@ func generateOutputs(from decodedFiles: [DecodedSVDFile]) -> [GeneratedDeviceOut
 
 func exportOutputs(_ generatedOutputs: [GeneratedDeviceOutput], to outputURL: URL) throws {
     for generatedOutput in generatedOutputs {
-        try exportGeneratedFiles(generatedOutput.files, to: outputURL)
+        try exportGeneratedOutput(generatedOutput, to: outputURL)
     }
 }
 

@@ -10,12 +10,22 @@
 		EE0C5E922F55DFB60053C834 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E902F55DFB50053C834 /* main.swift */; };
 		EE0C5E942F55DFB60053C834 /* SVD.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E932F55DFB60053C834 /* SVD.swift */; };
 		EE0C5E962F55DFB60053C834 /* SVDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0C5E952F55DFB60053C834 /* SVDDecoder.swift */; };
+		EEA200000000000000000001 /* SVDCodeGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000001 /* SVDCodeGenerator.swift */; };
+		EEA200000000000000000002 /* GenerationPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000002 /* GenerationPipeline.swift */; };
+		EEA200000000000000000003 /* GeneratorRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000003 /* GeneratorRegistry.swift */; };
+		EEA200000000000000000004 /* PeripheralGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000004 /* PeripheralGenerator.swift */; };
+		EEA200000000000000000005 /* GPIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000005 /* GPIO.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		EE0C5E902F55DFB50053C834 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		EE0C5E932F55DFB60053C834 /* SVD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVD.swift; sourceTree = "<group>"; };
 		EE0C5E952F55DFB60053C834 /* SVDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVDDecoder.swift; sourceTree = "<group>"; };
+		EEA100000000000000000001 /* SVDCodeGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/SVDCodeGenerator.swift; sourceTree = SOURCE_ROOT; };
+		EEA100000000000000000002 /* GenerationPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/GenerationPipeline.swift; sourceTree = SOURCE_ROOT; };
+		EEA100000000000000000003 /* GeneratorRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/GeneratorRegistry.swift; sourceTree = SOURCE_ROOT; };
+		EEA100000000000000000004 /* PeripheralGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/PeripheralGenerator.swift; sourceTree = SOURCE_ROOT; };
+		EEA100000000000000000005 /* GPIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/Peripherals/GPIO.swift; sourceTree = SOURCE_ROOT; };
 		EECLI0192F600000000000001 /* SwiftARMGeneratorCLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SwiftARMGeneratorCLI; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -147,6 +157,11 @@
 				EE0C5E922F55DFB60053C834 /* main.swift in Sources */,
 				EE0C5E942F55DFB60053C834 /* SVD.swift in Sources */,
 				EE0C5E962F55DFB60053C834 /* SVDDecoder.swift in Sources */,
+				EEA200000000000000000001 /* SVDCodeGenerator.swift in Sources */,
+				EEA200000000000000000002 /* GenerationPipeline.swift in Sources */,
+				EEA200000000000000000003 /* GeneratorRegistry.swift in Sources */,
+				EEA200000000000000000004 /* PeripheralGenerator.swift in Sources */,
+				EEA200000000000000000005 /* GPIO.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
