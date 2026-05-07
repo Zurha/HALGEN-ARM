@@ -9,7 +9,7 @@ import Foundation
 
 struct SERCOMGenerator: PeripheralGenerator {
     let name: String = "SERCOM"
-    let subdirectory: String = "module"
+    let subdirectory: String = "module/SERCOM"
 
     func supports(device: SVDDevice) -> Bool {
         sercomDefinition(in: device) != nil && sercomInstances(in: device).isEmpty == false
@@ -55,6 +55,10 @@ private func buildSERCOMSupport(device: SVDDevice, definition: SVDPeripheral, su
     )
 
     code += """
+    protocol SERCOMInstance {
+        static var baseAddress: UInt { get }
+    }
+
     struct SERCOM {
         private init() {}
     }
@@ -117,23 +121,20 @@ private func buildSERCOMInstance(
     )
 
     code += """
-    @usableFromInline let \(instance.name)_BASE: UInt = \(hexLiteral(instance.baseAddress, minimumDigits: 8))
-
     extension SERCOM {
-        struct \(instance.name) {
+        struct \(instance.name): SERCOMInstance {
             private init() {}
+            static let baseAddress: UInt = \(hexLiteral(instance.baseAddress, minimumDigits: 8))
 
     """
 
     if definition.registers.isEmpty == false {
-        code += "        static var registers: SERCOMRegisters { SERCOMRegisters(baseAddress: \(instance.name)_BASE) }\n"
+        code += "        typealias Registers = SERCOMRegisters<\(instance.name)>\n"
     }
 
     for cluster in definition.clusters {
         let clusterName = swiftTypeIdentifier(from: cleanedSVDName(cluster.name))
-        let clusterPropertyName = swiftMemberIdentifier(from: cluster.name)
-        code += "        typealias \(clusterName) = \(sercomLayoutTypeName(for: cluster))\n"
-        code += "        static var \(clusterPropertyName): \(clusterName) { \(clusterName)(baseAddress: \(instance.name)_BASE) }\n"
+        code += "        typealias \(clusterName) = \(sercomLayoutTypeName(for: cluster))<\(instance.name)>\n"
     }
 
     code += """
@@ -202,12 +203,8 @@ private func buildSERCOMRegisterLayout(
 ) -> String {
     var code = """
     /// \(description)
-    struct \(name) {
-        let baseAddress: UInt
-
-        init(baseAddress: UInt) {
-            self.baseAddress = baseAddress
-        }
+    struct \(name)<Instance: SERCOMInstance> {
+        private init() {}
 
     """
 
@@ -219,7 +216,7 @@ private func buildSERCOMRegisterLayout(
         let clusterName = swiftTypeIdentifier(from: cleanedSVDName(cluster.name))
         let nestedTypeName = "\(name)\(clusterName)"
 
-        code += "    var \(clusterName): \(nestedTypeName) { \(nestedTypeName)(baseAddress: baseAddress) }\n\n"
+        code += "    typealias \(clusterName) = \(nestedTypeName)<Instance>\n\n"
         code += buildSERCOMClusterLayout(cluster: cluster, typeName: nestedTypeName, baseOffset: baseOffset)
     }
 
@@ -266,7 +263,7 @@ private func buildSERCOMRegisterProperty(
     let offset = baseOffset + addressOffset + UInt64(elementIndex ?? 0) * (register.dimIncrement ?? 0)
     let registerName = displaySVDName(register.name, elementIndex: elementIndex)
     let variableName = swiftMemberIdentifier(from: registerName)
-    let addressExpression = sercomRegisterAddressExpression(baseName: "baseAddress", offset: offset)
+    let addressExpression = sercomRegisterAddressExpression(baseName: "Instance.baseAddress", offset: offset)
     let isReadOnly = register.access == "read-only"
     let registerSize = register.size ?? 32
     let spaces = String(repeating: " ", count: indentation)
@@ -278,17 +275,22 @@ private func buildSERCOMRegisterProperty(
         sercomBuildSetter(addressExpression: addressExpression, offset: offset, registerSize: registerSize),
         by: indentation + 4
     )
-    let fields = buildSERCOMFieldConstants(register: register, registerName: registerName, indentation: indentation)
+    let bitfields = buildSERCOMBitfieldAccessors(
+        register: register,
+        registerName: registerName,
+        parentVariableName: variableName,
+        indentation: indentation
+    )
 
     return """
     \(sercomIndent(makeSERCOMRegisterDocumentation(registerName: registerName, register: register), by: indentation))
     \(spaces)@inline(__always)
-    \(spaces)var \(variableName): UInt32 {
+    \(spaces)static var \(variableName): UInt32 {
     \(getter)
     \(setter)
     \(spaces)}
 
-    \(fields)
+    \(bitfields)
     """
 }
 
@@ -341,7 +343,7 @@ private func sercomBuildSetter(addressExpression: String, offset: UInt64, regist
         )
 
         return """
-        nonmutating set {
+        set {
             let word = _volatileRegisterReadUInt32(\(alignedExpression))
             _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFF) << \(shift)))
         }
@@ -356,14 +358,14 @@ private func sercomBuildSetter(addressExpression: String, offset: UInt64, regist
         )
 
         return """
-        nonmutating set {
+        set {
             let word = _volatileRegisterReadUInt32(\(alignedExpression))
             _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFFFF) << \(shift)))
         }
         """
     default:
         return """
-        nonmutating set {
+        set {
             _volatileRegisterWriteUInt32(\(addressExpression), newValue)
         }
         """
@@ -410,18 +412,18 @@ private func sercomIndent(_ text: String, by spaces: Int) -> String {
         .joined(separator: "\n")
 }
 
-private func buildSERCOMFieldConstants(register: SVDRegister, registerName: String, indentation: Int) -> String {
+private func buildSERCOMBitfieldAccessors(
+    register: SVDRegister,
+    registerName: String,
+    parentVariableName: String,
+    indentation: Int
+) -> String {
     guard register.fields.isEmpty == false else {
         return ""
     }
 
     let spaces = String(repeating: " ", count: indentation)
-    let fieldContainerName = "\(swiftTypeIdentifier(from: cleanedSVDName(registerName)))Fields"
-    var code = """
-    \(spaces)struct \(fieldContainerName) {
-    \(spaces)    private init() {}
-
-    """
+    var code = ""
 
     for field in register.fields {
         guard let bitOffset = field.bitOffset,
@@ -429,17 +431,35 @@ private func buildSERCOMFieldConstants(register: SVDRegister, registerName: Stri
             continue
         }
 
-        let fieldName = swiftMemberIdentifier(from: field.name)
+        let accessorName = bitfieldAccessorName(
+            registerVariableName: parentVariableName,
+            fieldName: field.name
+        )
+        let fieldHelper = "SERCOMRegisterField(offset: \(bitOffset), width: \(bitWidth))"
+        let setter = register.access == "read-only" || fieldAccessIsReadOnly(field.access) ? "" : """
+    \(spaces)    set {
+    \(spaces)        \(parentVariableName) = \(fieldHelper).inserting(newValue, into: \(parentVariableName))
+    \(spaces)    }
+    """
 
-        code += "\(spaces)    static let \(fieldName) = SERCOMRegisterField(offset: \(bitOffset), width: \(bitWidth))\n"
-    }
-
-    code += """
+        code += """
+    \(spaces)/// \(field.description ?? field.name) bitfield of \(registerName).
+    \(spaces)@inline(__always)
+    \(spaces)static var \(accessorName): UInt32 {
+    \(spaces)    get {
+    \(spaces)        \(fieldHelper).read(from: \(parentVariableName))
+    \(spaces)    }
+    \(setter)
     \(spaces)}
 
     """
+    }
 
     return code
+}
+
+private func fieldAccessIsReadOnly(_ access: String?) -> Bool {
+    access == "read-only"
 }
 
 private func displaySVDName(_ rawName: String, elementIndex: Int?) -> String {
@@ -453,6 +473,23 @@ private func cleanedSVDName(_ rawName: String) -> String {
 
 private func sercomLayoutTypeName(for cluster: SVDCluster) -> String {
     "SERCOM\(swiftTypeIdentifier(from: cleanedSVDName(cluster.name)))"
+}
+
+private func bitfieldAccessorName(registerVariableName: String, fieldName: String) -> String {
+    let fieldVariableName = swiftMemberIdentifier(from: fieldName)
+    guard fieldVariableName != registerVariableName else {
+        return "\(registerVariableName)Value"
+    }
+
+    return "\(registerVariableName)\(upperCamelSuffix(fieldVariableName))"
+}
+
+private func upperCamelSuffix(_ rawValue: String) -> String {
+    guard let first = rawValue.first else {
+        return ""
+    }
+
+    return String(first).uppercased() + rawValue.dropFirst()
 }
 
 private func swiftMemberIdentifier(from rawValue: String) -> String {
