@@ -46,11 +46,6 @@ private struct SERCOMInstance {
     let baseAddress: UInt64
 }
 
-private enum SERCOMRegisterWriteBehavior {
-    case normal
-    case writeOneToClear
-}
-
 private func buildSERCOMInstance(
     device: SVDDevice,
     instance: SERCOMInstance,
@@ -260,127 +255,25 @@ private func buildSERCOMRegisterProperty(
 }
 
 private func sercomBuildGetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
-    switch registerSize {
-    case 8:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x3) * 8
-        let alignedExpression = sercomRegisterAddressExpression(
-            baseName: sercomAddressExpressionBase(addressExpression),
-            offset: alignedOffset
-        )
-
-        return """
-        get {
-            (_volatileRegisterReadUInt32(\(alignedExpression)) >> \(shift)) & 0x000000FF
-        }
-        """
-    case 16:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x2) * 8
-        let alignedExpression = sercomRegisterAddressExpression(
-            baseName: sercomAddressExpressionBase(addressExpression),
-            offset: alignedOffset
-        )
-
-        return """
-        get {
-            (_volatileRegisterReadUInt32(\(alignedExpression)) >> \(shift)) & 0x0000FFFF
-        }
-        """
-    default:
-        return """
-        get {
-            _volatileRegisterReadUInt32(\(addressExpression))
-        }
-        """
-    }
+    buildSVDRegisterGetter(
+        addressExpression: addressExpression,
+        offset: offset,
+        registerSize: registerSize
+    )
 }
 
 private func sercomBuildSetter(
     addressExpression: String,
     offset: UInt64,
     registerSize: Int,
-    writeBehavior: SERCOMRegisterWriteBehavior
+    writeBehavior: SVDRegisterWriteBehavior
 ) -> String {
-    if writeBehavior == .writeOneToClear {
-        return sercomBuildDirectSetter(addressExpression: addressExpression, offset: offset, registerSize: registerSize)
-    }
-
-    switch registerSize {
-    case 8:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x3) * 8
-        let mask = UInt64(0xFF) << shift
-        let alignedExpression = sercomRegisterAddressExpression(
-            baseName: sercomAddressExpressionBase(addressExpression),
-            offset: alignedOffset
-        )
-
-        return """
-        set {
-            let word = _volatileRegisterReadUInt32(\(alignedExpression))
-            _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFF) << \(shift)))
-        }
-        """
-    case 16:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x2) * 8
-        let mask = UInt64(0xFFFF) << shift
-        let alignedExpression = sercomRegisterAddressExpression(
-            baseName: sercomAddressExpressionBase(addressExpression),
-            offset: alignedOffset
-        )
-
-        return """
-        set {
-            let word = _volatileRegisterReadUInt32(\(alignedExpression))
-            _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFFFF) << \(shift)))
-        }
-        """
-    default:
-        return """
-        set {
-            _volatileRegisterWriteUInt32(\(addressExpression), newValue)
-        }
-        """
-    }
-}
-
-private func sercomBuildDirectSetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
-    switch registerSize {
-    case 8:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x3) * 8
-        let alignedExpression = sercomRegisterAddressExpression(
-            baseName: sercomAddressExpressionBase(addressExpression),
-            offset: alignedOffset
-        )
-
-        return """
-        set {
-            _volatileRegisterWriteUInt32(\(alignedExpression), (newValue & 0xFF) << \(shift))
-        }
-        """
-    case 16:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x2) * 8
-        let alignedExpression = sercomRegisterAddressExpression(
-            baseName: sercomAddressExpressionBase(addressExpression),
-            offset: alignedOffset
-        )
-
-        return """
-        set {
-            _volatileRegisterWriteUInt32(\(alignedExpression), (newValue & 0xFFFF) << \(shift))
-        }
-        """
-    default:
-        return """
-        set {
-            _volatileRegisterWriteUInt32(\(addressExpression), newValue)
-        }
-        """
-    }
+    buildSVDRegisterSetter(
+        addressExpression: addressExpression,
+        offset: offset,
+        registerSize: registerSize,
+        writeBehavior: writeBehavior
+    )
 }
 
 private func buildSERCOMBitfieldAccessors(
@@ -394,7 +287,7 @@ private func buildSERCOMBitfieldAccessors(
     baseOffset: UInt64,
     fieldUsage: [String: Int],
     registerVariableNames: Set<String>,
-    writeBehavior: SERCOMRegisterWriteBehavior,
+    writeBehavior: SVDRegisterWriteBehavior,
     indentation: Int
 ) -> String {
     guard register.fields.isEmpty == false else {
@@ -421,10 +314,8 @@ private func buildSERCOMBitfieldAccessors(
             registerVariableNames: registerVariableNames,
             registerName: register.name
         )
-        let accessorType = bitWidth == 1 ? "Bool" : "UInt32"
-        let getter = bitWidth == 1
-            ? "get { (\(parentExpression) & (UInt32(1) << \(bitOffset))) != 0 }"
-            : "get { (\(parentExpression) >> \(bitOffset)) & \(hexLiteral((UInt64(1) << UInt64(bitWidth)) - 1)) }"
+        let accessorType = svdBitfieldAccessorType(bitWidth: bitWidth)
+        let getter = "get { \(svdBitfieldGetterExpression(parentExpression: parentExpression, bitOffset: bitOffset, bitWidth: bitWidth)) }"
         let setter = sercomBuildBitfieldSetter(
             field: field,
             bitOffset: bitOffset,
@@ -455,7 +346,7 @@ private func sercomBuildBitfieldSetter(
     bitWidth: Int,
     parentExpression: String,
     registerAccess: String?,
-    writeBehavior: SERCOMRegisterWriteBehavior,
+    writeBehavior: SVDRegisterWriteBehavior,
     baseName: String,
     baseOffset: UInt64
 ) -> String? {
@@ -498,25 +389,16 @@ private func sercomBuildWriteOneToClearBitfieldSetter(
         return "set { if newValue { _volatileRegisterWriteUInt32(\(addressExpression), UInt32(1) << \(shift)) } }"
     }
 
-    let fieldMask = hexLiteral((UInt64(1) << UInt64(fieldWidth)) - 1)
-    let writeMask = hexLiteral(((UInt64(1) << UInt64(fieldWidth)) - 1) << shift, minimumDigits: 8)
+    let fieldMask = hexLiteral(svdBitfieldMask(bitWidth: fieldWidth))
+    let writeMask = hexLiteral(svdBitfieldMask(bitWidth: fieldWidth) << shift, minimumDigits: 8)
     return "set { if newValue != 0 { _volatileRegisterWriteUInt32(\(addressExpression), ((newValue & \(fieldMask)) << \(shift)) & \(writeMask)) } }"
 }
 
 private func sercomRegisterAddressExpression(baseName: String, offset: UInt64) -> String {
-    guard offset != 0 else {
-        return baseName
-    }
-
-    return "\(baseName) + \(hexLiteral(offset))"
+    svdRegisterAddressExpression(baseName: baseName, offset: offset)
 }
 
-private func sercomAddressExpressionBase(_ addressExpression: String) -> String {
-    String(addressExpression.split(separator: "+", maxSplits: 1).first ?? Substring(addressExpression))
-        .trimmingCharacters(in: .whitespaces)
-}
-
-private func sercomWriteBehavior(for register: SVDRegister) -> SERCOMRegisterWriteBehavior {
+private func sercomWriteBehavior(for register: SVDRegister) -> SVDRegisterWriteBehavior {
     switch cleanedSVDName(register.name) {
     case "INTFLAG", "STATUS":
         return .writeOneToClear
@@ -542,14 +424,7 @@ private func makeSERCOMRegisterDocumentation(registerName: String, register: SVD
 }
 
 private func sercomIndent(_ text: String, by spaces: Int) -> String {
-    let prefix = String(repeating: " ", count: spaces)
-
-    return text
-        .split(separator: "\n", omittingEmptySubsequences: false)
-        .map { line in
-            line.isEmpty ? "" : prefix + line
-        }
-        .joined(separator: "\n")
+    svdIndent(text, by: spaces)
 }
 
 private func fieldAccessIsReadOnly(_ access: String?) -> Bool {

@@ -196,82 +196,30 @@ private func buildRegisterProperty(
 }
 
 private func buildGetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
-    switch registerSize {
-    case 8:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x3) * 8
-        let alignedExpression = registerAddressExpression(baseName: addressExpressionBase(addressExpression), offset: alignedOffset)
-
-        return """
-                get {
-                    (_volatileRegisterReadUInt32(\(alignedExpression)) >> \(shift)) & 0x000000FF
-                }
-    """
-    case 16:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x2) * 8
-        let alignedExpression = registerAddressExpression(baseName: addressExpressionBase(addressExpression), offset: alignedOffset)
-
-        return """
-                get {
-                    (_volatileRegisterReadUInt32(\(alignedExpression)) >> \(shift)) & 0x0000FFFF
-                }
-    """
-    default:
-        return """
-                get {
-                    _volatileRegisterReadUInt32(\(addressExpression))
-                }
-    """
-    }
+    svdIndent(
+        buildSVDRegisterGetter(
+            addressExpression: addressExpression,
+            offset: offset,
+            registerSize: registerSize
+        ),
+        by: 12
+    )
 }
 
 private func buildSetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
-    switch registerSize {
-    case 8:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x3) * 8
-        let mask = UInt64(0xFF) << shift
-        let alignedExpression = registerAddressExpression(baseName: addressExpressionBase(addressExpression), offset: alignedOffset)
-
-        return """
-                set {
-                    let word = _volatileRegisterReadUInt32(\(alignedExpression))
-                    _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFF) << \(shift)))
-                }
-    """
-    case 16:
-        let alignedOffset = offset & ~0x3
-        let shift = (offset & 0x2) * 8
-        let mask = UInt64(0xFFFF) << shift
-        let alignedExpression = registerAddressExpression(baseName: addressExpressionBase(addressExpression), offset: alignedOffset)
-
-        return """
-                set {
-                    let word = _volatileRegisterReadUInt32(\(alignedExpression))
-                    _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFFFF) << \(shift)))
-                }
-    """
-    default:
-        return """
-                set {
-                    _volatileRegisterWriteUInt32(\(addressExpression), newValue)
-                }
-    """
-    }
+    svdIndent(
+        buildSVDRegisterSetter(
+            addressExpression: addressExpression,
+            offset: offset,
+            registerSize: registerSize,
+            writeBehavior: .normal
+        ),
+        by: 12
+    )
 }
 
 private func registerAddressExpression(baseName: String, offset: UInt64) -> String {
-    guard offset != 0 else {
-        return baseName
-    }
-
-    return "\(baseName) + \(hexLiteral(offset))"
-}
-
-private func addressExpressionBase(_ addressExpression: String) -> String {
-    String(addressExpression.split(separator: "+", maxSplits: 1).first ?? Substring(addressExpression))
-        .trimmingCharacters(in: .whitespaces)
+    svdRegisterAddressExpression(baseName: baseName, offset: offset)
 }
 
 private func makeRegisterDocumentation(registerName: String, description: String, register: SVDRegister) -> String {

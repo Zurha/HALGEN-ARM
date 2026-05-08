@@ -6,177 +6,160 @@
 //
 
 import Foundation
-import SwiftSyntax
-import SwiftSyntaxBuilder
 
-private enum RegisterByteWidth: String {
-    case one = "1"
-    case two = "2"
-    case four = "4"
+enum SVDRegisterWriteBehavior {
+    case normal
+    case writeOneToClear
 }
 
-/// Generates Swift code for a hardware register with optional documentation
-///
-/// This function creates Swift code representation for a hardware register,
-/// incorporating variable names, optional documentation comments, and supplemental
-/// data from chip documentation files. It handles both register-level and bitfield-level
-/// information to produce comprehensive register documentation.
-///
-/// - Parameter register: The register object containing metadata such as name, offset,
-///   and bitfield information from the ATDF device file.
-/// - Parameter externalVariableName: The Swift identifier to use for the register in generated code.
-/// - Parameter optionalDocumentation: Optional array of documentation strings to include
-///   in the generated comments.
-/// - Parameter registerData: Supplemental data for the register including access type,
-///   default value, and formatted documentation from chip documentation files.
-/// - Parameter bitfieldData: Supplemental data for bitfields including access type,
-///   default value, and formatted documentation from chip documentation files.
-/// - Parameter generateRegisterTable: Boolean flag indicating whether to generate a
-///   register table for documentation purposes.
-///
-/// - Returns: Generated Swift code file containing the register definition and documentation.
-func generateRegister(
-    register: AVRModules.Module.RegisterGroup.Register,
-    variableName externalVariableName: String = "",
-    optionalDocumentation: String = "",
-    optionalInitialValues: [String]? = nil,
-    registerData: (_ register: AVRModules.Module.RegisterGroup.Register) -> SupplementalRegisterData,
-    bitfieldData: (_ bitfield: AVRModules.Module.RegisterGroup.Register.Bitfield) -> SupplementalBitfieldData,
-    generateRegisterTable: Bool = true
-) -> MemberBlockItemListSyntax {
-    guard let registerSize = RegisterByteWidth(rawValue: register.size) else {
-        preconditionFailure("Unsupported register size: \(register.size)")
-    }
+func buildSVDRegisterGetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
+    switch registerSize {
+    case 8:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x3) * 8
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
 
-    let supplementalRegisterData = registerData(register)
-    
-    // If the register has bitfields then generate each bit name, if not then there is just one name for all of the bits.
-    var registerName = ""
-    var readWrite = ""
-    let registerAccess = supplementalRegisterData.access
-    let documentation = (optionalDocumentation.isEmpty == false) ? optionalDocumentation : supplementalRegisterData.documentation
-    let initialValues = optionalInitialValues ?? supplementalRegisterData.initialValues
-    let variableName = (externalVariableName.isEmpty == false) ? externalVariableName : supplementalRegisterData.variableName
-    var memberBlockList = MemberBlockItemListSyntax()
-    var generateRegisterTableDoc = generateRegisterTable
-    
-    if registerSize == .two {
-        // get register and change size to 1 so uint8 registers are generated instead of 16 bit
-        var customRegisterL: AVRModules.Module.RegisterGroup.Register = register
-        customRegisterL.size = RegisterByteWidth.one.rawValue
-        memberBlockList.append(
-            contentsOf: generateRegister(
-                register: customRegisterL,
-                variableName: "\(supplementalRegisterData.variableName)L",
-                optionalDocumentation: "\(supplementalRegisterData.documentationL ?? "")",
-                optionalInitialValues: supplementalRegisterData.initialValuesL,
-                registerData: registerData,
-                bitfieldData: bitfieldData
-            )
-        )
-        
-        var customRegisterH: AVRModules.Module.RegisterGroup.Register = register
-        customRegisterH.size = RegisterByteWidth.one.rawValue
-        // I have no idea if this is ok, I'll just assume it is since it works
-        customRegisterH.offset = (register.offset.hexValue() + 1).toHex()
-        memberBlockList.append(
-            contentsOf: generateRegister(
-                register: customRegisterH,
-                variableName: "\(supplementalRegisterData.variableName)H",
-                optionalDocumentation: "\(supplementalRegisterData.documentationH ?? "")",
-                optionalInitialValues: supplementalRegisterData.initialValuesH,
-                registerData: registerData,
-                bitfieldData: bitfieldData
-            )
-        )
-        generateRegisterTableDoc = false
-    }
-    
-    if register.bitfield.isEmpty {
-        registerName = padString(register.name, padding: 63)
-        readWrite = padString(registerAccess, padding: 63)
-    } else {
-        var bitNames = getBitNames(from: register)
-        bitNames = bitNames.map { padString($0, padding: 7) }
-        registerName = "\(bitNames[7])|\(bitNames[6])|\(bitNames[5])|\(bitNames[4])|\(bitNames[3])|\(bitNames[2])|\(bitNames[1])|\(bitNames[0])"
-        
-        var bitAccess = getBitAccess(from: register, parentAccess: registerAccess, supplementalData: bitfieldData) // TODO: Check the register for it's access level
-        bitAccess = bitAccess.map { padString($0, padding: 7) }
-        readWrite = "\(bitAccess[7])|\(bitAccess[6])|\(bitAccess[5])|\(bitAccess[4])|\(bitAccess[3])|\(bitAccess[2])|\(bitAccess[1])|\(bitAccess[0])"
-    }
-    
-    var bit: (size: String, atomicStart: String, atomicEnd: String) {
-        switch registerSize {
-        case .one:
-            return (size: "UInt8", atomicStart: "", atomicEnd: "")
-        case .two:
-            return (size: "UInt16", atomicStart: "atomic {", atomicEnd: " }")
-        case .four:
-            return (size: "UInt32", atomicStart: "atomic {", atomicEnd: " }")
+        return """
+        get {
+            (_volatileRegisterReadUInt32(\(alignedExpression)) >> \(shift)) & 0x000000FF
         }
-    }
-    
-    let table = """
-    ```
-    --------------------------------------------------------------------------------
-    | Bit          |   7   |   6   |   5   |   4   |   3   |   2   |   1   |   0   |
-    --------------------------------------------------------------------------------
-    | (\(register.offset))       |\(registerName)|
-    --------------------------------------------------------------------------------
-    | Read/Write   |\(readWrite)|
-    --------------------------------------------------------------------------------
-    | InitialValue |\(makeInitialValueRow(from: initialValues))|
-    --------------------------------------------------------------------------------
-    ```
-    """
+        """
+    case 16:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x2) * 8
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
 
-    let documentationComment: String
-    if supplementalRegisterData.overrideGeneratedDocumentation {
-        documentationComment = makeDocumentationComment(body: documentation)
-    } else {
-        documentationComment = makeDocumentationComment(
-            title: "\(register.name) – \(register.caption ?? variableName)",
-            body: joinDocumentationSections([
-                documentation,
-                generateRegisterTableDoc ? table : ""
-            ])
+        return """
+        get {
+            (_volatileRegisterReadUInt32(\(alignedExpression)) >> \(shift)) & 0x0000FFFF
+        }
+        """
+    default:
+        return """
+        get {
+            _volatileRegisterReadUInt32(\(addressExpression))
+        }
+        """
+    }
+}
+
+func buildSVDRegisterSetter(
+    addressExpression: String,
+    offset: UInt64,
+    registerSize: Int,
+    writeBehavior: SVDRegisterWriteBehavior
+) -> String {
+    if writeBehavior == .writeOneToClear {
+        return buildSVDDirectRegisterSetter(
+            addressExpression: addressExpression,
+            offset: offset,
+            registerSize: registerSize
         )
     }
-    
-    let setterLines: [String]
-    if registerAccess == Access.read.rawValue {
-        setterLines = [
-        ]
-    } else {
-        setterLines = [
-            "    set {",
-            "        \(bit.atomicStart)_volatileRegisterWrite\(bit.size)(\(register.offset), newValue)\(bit.atomicEnd)",
-            "    }"
-        ]
+
+    switch registerSize {
+    case 8:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x3) * 8
+        let mask = UInt64(0xFF) << shift
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
+        return """
+        set {
+            let word = _volatileRegisterReadUInt32(\(alignedExpression))
+            _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFF) << \(shift)))
+        }
+        """
+    case 16:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x2) * 8
+        let mask = UInt64(0xFFFF) << shift
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
+        return """
+        set {
+            let word = _volatileRegisterReadUInt32(\(alignedExpression))
+            _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFFFF) << \(shift)))
+        }
+        """
+    default:
+        return """
+        set {
+            _volatileRegisterWriteUInt32(\(addressExpression), newValue)
+        }
+        """
+    }
+}
+
+func buildSVDDirectRegisterSetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
+    switch registerSize {
+    case 8:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x3) * 8
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
+        return """
+        set {
+            _volatileRegisterWriteUInt32(\(alignedExpression), (newValue & 0xFF) << \(shift))
+        }
+        """
+    case 16:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x2) * 8
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
+        return """
+        set {
+            _volatileRegisterWriteUInt32(\(alignedExpression), (newValue & 0xFFFF) << \(shift))
+        }
+        """
+    default:
+        return """
+        set {
+            _volatileRegisterWriteUInt32(\(addressExpression), newValue)
+        }
+        """
+    }
+}
+
+func svdRegisterAddressExpression(baseName: String, offset: UInt64) -> String {
+    guard offset != 0 else {
+        return baseName
     }
 
-    var declarationLines: [String] = []
-    if documentationComment.isEmpty == false {
-        declarationLines.append(documentationComment)
-    }
+    return "\(baseName) + \(hexLiteral(offset))"
+}
 
-    declarationLines.append(contentsOf: [
-        "@inlinable",
-        "@inline(__always)",
-        "public static var \(variableName): \(bit.size) {",
-        "    get {",
-        "        \(bit.atomicStart)_volatileRegisterRead\(bit.size)(\(register.offset))\(bit.atomicEnd)",
-        "    }"
-    ])
+func svdAddressExpressionBase(_ addressExpression: String) -> String {
+    String(addressExpression.split(separator: "+", maxSplits: 1).first ?? Substring(addressExpression))
+        .trimmingCharacters(in: .whitespaces)
+}
 
-    declarationLines.append(contentsOf: setterLines)
-    declarationLines.append("}")
+func svdIndent(_ text: String, by spaces: Int) -> String {
+    let prefix = String(repeating: " ", count: spaces)
 
-    let declaration = declarationLines.joined(separator: "\n")
-
-    let source = DeclSyntax("\(raw: declaration)").with(\.trailingTrivia, .newlines(2))
-    
-    memberBlockList.append(MemberBlockItemSyntax(decl: source))
-    
-    return memberBlockList
+    return text
+        .split(separator: "\n", omittingEmptySubsequences: false)
+        .map { line in
+            line.isEmpty ? "" : prefix + line
+        }
+        .joined(separator: "\n")
 }
