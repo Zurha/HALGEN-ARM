@@ -39,6 +39,28 @@ struct SERCOMGenerator: PeripheralGenerator {
             )
         }
     }
+
+    func generate(device: SVDDevice, documentation: ChipDocumentationLoader) -> [GeneratedCodeFile] {
+        guard let definition = sercomDefinition(in: device) else {
+            return []
+        }
+
+        let modules = sercomModules(in: definition)
+        let instances = sercomInstances(in: device)
+        guard modules.isEmpty == false && instances.isEmpty == false else {
+            return []
+        }
+
+        return instances.map { instance in
+            buildSERCOMInstance(
+                device: device,
+                instance: instance,
+                modules: modules,
+                subdirectory: subdirectory,
+                documentation: documentation
+            )
+        }
+    }
 }
 
 private struct SERCOMInstance {
@@ -50,7 +72,8 @@ private func buildSERCOMInstance(
     device: SVDDevice,
     instance: SERCOMInstance,
     modules: [SVDCluster],
-    subdirectory: String
+    subdirectory: String,
+    documentation: ChipDocumentationLoader? = nil
 ) -> GeneratedCodeFile {
     let fileName = "\(instance.name).swift"
     let moduleName = device.generatedSwiftModuleName
@@ -67,7 +90,12 @@ private func buildSERCOMInstance(
     code += "struct \(instance.name) {\n\n"
 
     for module in modules {
-        code += buildSERCOMModule(instanceName: instance.name, baseName: baseName, module: module)
+        code += buildSERCOMModule(
+            instanceName: instance.name,
+            baseName: baseName,
+            module: module,
+            documentation: documentation
+        )
     }
 
     code += "}\n"
@@ -122,10 +150,15 @@ private func sercomInstanceIndex(_ name: String) -> Int {
     Int(name.dropFirst("SERCOM".count)) ?? 0
 }
 
-private func buildSERCOMModule(instanceName: String, baseName: String, module: SVDCluster) -> String {
+private func buildSERCOMModule(
+    instanceName: String,
+    baseName: String,
+    module: SVDCluster,
+    documentation: ChipDocumentationLoader? = nil
+) -> String {
     let moduleName = swiftTypeIdentifier(from: cleanedSVDName(module.name))
     let baseOffset = module.addressOffset ?? 0
-    let registerVariableNames = sercomRegisterVariableNames(in: module.registers)
+    let registerVariableNames = sercomRegisterVariableNames(in: module.registers, documentation: documentation)
     let fieldUsage = sercomFieldUsage(in: module.registers)
 
     var code = ""
@@ -141,7 +174,8 @@ private func buildSERCOMModule(instanceName: String, baseName: String, module: S
             baseOffset: baseOffset,
             fieldUsage: fieldUsage,
             registerVariableNames: registerVariableNames,
-            indentation: 8
+            indentation: 8,
+            documentation: documentation
         )
     }
 
@@ -158,7 +192,8 @@ private func buildSERCOMRegister(
     baseOffset: UInt64,
     fieldUsage: [String: Int],
     registerVariableNames: Set<String>,
-    indentation: Int
+    indentation: Int,
+    documentation: ChipDocumentationLoader? = nil
 ) -> String {
     if let dim = register.dim, dim > 1 {
         return (0..<dim)
@@ -172,7 +207,8 @@ private func buildSERCOMRegister(
                     elementIndex: elementIndex,
                     fieldUsage: fieldUsage,
                     registerVariableNames: registerVariableNames,
-                    indentation: indentation
+                    indentation: indentation,
+                    documentation: documentation
                 )
             }
             .joined()
@@ -187,7 +223,8 @@ private func buildSERCOMRegister(
         elementIndex: nil,
         fieldUsage: fieldUsage,
         registerVariableNames: registerVariableNames,
-        indentation: indentation
+        indentation: indentation,
+        documentation: documentation
     )
 }
 
@@ -200,7 +237,8 @@ private func buildSERCOMRegisterProperty(
     elementIndex: Int?,
     fieldUsage: [String: Int],
     registerVariableNames: Set<String>,
-    indentation: Int
+    indentation: Int,
+    documentation: ChipDocumentationLoader? = nil
 ) -> String {
     guard let addressOffset = register.addressOffset else {
         return ""
@@ -208,11 +246,13 @@ private func buildSERCOMRegisterProperty(
 
     let offset = baseOffset + addressOffset + UInt64(elementIndex ?? 0) * (register.dimIncrement ?? 0)
     let registerName = displaySVDName(register.name, elementIndex: elementIndex)
-    let variableName = sercomRegisterVariableName(for: register)
+    let suppData = documentation?.supplementalData(for: register)
+    let variableName = suppData?.variableName ?? sercomRegisterVariableName(for: register)
     let addressExpression = sercomRegisterAddressExpression(baseName: baseName, offset: offset)
     let registerSize = register.size ?? 32
     let writeBehavior = sercomWriteBehavior(for: register)
-    let isReadOnly = register.access == "read-only" && writeBehavior != .writeOneToClear
+    let access = suppData?.access ?? register.access
+    let isReadOnly = access == "read-only" && writeBehavior != .writeOneToClear
     let spaces = String(repeating: " ", count: indentation)
     let getter = sercomIndent(
         sercomBuildGetter(addressExpression: addressExpression, offset: offset, registerSize: registerSize),
@@ -227,6 +267,14 @@ private func buildSERCOMRegisterProperty(
         ),
         by: indentation + 4
     )
+
+    let registerDocumentation: String
+    if let suppDocs = suppData?.documentation, suppDocs.isEmpty == false {
+        registerDocumentation = makeDocumentationComment(body: suppDocs)
+    } else {
+        registerDocumentation = sercomIndent(makeSERCOMRegisterDocumentation(registerName: registerName, register: register), by: indentation)
+    }
+
     let bitfields = buildSERCOMBitfieldAccessors(
         instanceName: instanceName,
         moduleName: moduleName,
@@ -239,11 +287,12 @@ private func buildSERCOMRegisterProperty(
         fieldUsage: fieldUsage,
         registerVariableNames: registerVariableNames,
         writeBehavior: writeBehavior,
-        indentation: indentation
+        indentation: indentation,
+        documentation: documentation
     )
 
     return """
-    \(sercomIndent(makeSERCOMRegisterDocumentation(registerName: registerName, register: register), by: indentation))
+    \(registerDocumentation)
     \(spaces)@inline(__always)
     \(spaces)static var \(variableName): UInt32 {
     \(getter)
@@ -288,7 +337,8 @@ private func buildSERCOMBitfieldAccessors(
     fieldUsage: [String: Int],
     registerVariableNames: Set<String>,
     writeBehavior: SVDRegisterWriteBehavior,
-    indentation: Int
+    indentation: Int,
+    documentation: ChipDocumentationLoader? = nil
 ) -> String {
     guard register.fields.isEmpty == false else {
         return ""
@@ -327,8 +377,15 @@ private func buildSERCOMBitfieldAccessors(
             baseOffset: baseOffset
         )
 
+        let fieldDocumentation: String
+        if let fieldSupp = documentation?.supplementalData(for: field), fieldSupp.documentation.isEmpty == false {
+            fieldDocumentation = "/// \(fieldSupp.documentation)"
+        } else {
+            fieldDocumentation = "/// \(field.description ?? field.name)"
+        }
+
         code += """
-        \(spaces)/// \(field.description ?? field.name)
+        \(spaces)\(fieldDocumentation)
         \(spaces)@inlinable @inline(__always)
         \(spaces)static var \(accessorName): \(accessorType) {
         \(spaces)    \(getter)
@@ -449,10 +506,10 @@ private func sercomRegisterVariableName(for register: SVDRegister) -> String {
     return hasSelfNamedField ? "\(baseName)Register" : baseName
 }
 
-private func sercomRegisterVariableNames(in registers: [SVDRegister]) -> Set<String> {
+private func sercomRegisterVariableNames(in registers: [SVDRegister], documentation: ChipDocumentationLoader? = nil) -> Set<String> {
     Set(registers.compactMap { register in
         register.addressOffset.map { _ in
-            sercomRegisterVariableName(for: register)
+            documentation?.supplementalData(for: register).variableName ?? sercomRegisterVariableName(for: register)
         }
     })
 }

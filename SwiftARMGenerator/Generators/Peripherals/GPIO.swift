@@ -22,9 +22,17 @@ struct GPIOGenerator: PeripheralGenerator {
 
         return [buildGPIO(device: device, peripheral: port, subdirectory: subdirectory)]
     }
+
+    func generate(device: SVDDevice, documentation: ChipDocumentationLoader) -> [GeneratedCodeFile] {
+        guard let port = portPeripheral(in: device) else {
+            return []
+        }
+
+        return [buildGPIO(device: device, peripheral: port, subdirectory: subdirectory, documentation: documentation)]
+    }
 }
 
-private func buildGPIO(device: SVDDevice, peripheral: SVDPeripheral, subdirectory: String) -> GeneratedCodeFile {
+private func buildGPIO(device: SVDDevice, peripheral: SVDPeripheral, subdirectory: String, documentation: ChipDocumentationLoader? = nil) -> GeneratedCodeFile {
     let fileName = "GPIO.swift"
     let moduleName = device.generatedSwiftModuleName
     let groupCount = portGroupCount(in: peripheral)
@@ -56,7 +64,8 @@ private func buildGPIO(device: SVDDevice, peripheral: SVDPeripheral, subdirector
         code += buildPortGroup(
             name: portTypeName(for: groupIndex),
             groupIndex: groupIndex,
-            registers: registers
+            registers: registers,
+            documentation: documentation
         )
     }
 
@@ -128,7 +137,7 @@ private func isPortGroupRegister(_ register: SVDRegister) -> Bool {
     ].contains(name)
 }
 
-private func buildPortGroup(name portName: String, groupIndex: Int, registers: [SVDRegister]) -> String {
+private func buildPortGroup(name portName: String, groupIndex: Int, registers: [SVDRegister], documentation: ChipDocumentationLoader?) -> String {
     var code = """
         struct \(portName): AtomicPort {
             private init() {}
@@ -136,7 +145,12 @@ private func buildPortGroup(name portName: String, groupIndex: Int, registers: [
     """
 
     for register in registers {
-        code += buildPortRegister(register: register, portName: portName, groupIndex: groupIndex)
+        code += buildPortRegister(
+            register: register,
+            portName: portName,
+            groupIndex: groupIndex,
+            documentation: documentation
+        )
     }
 
     code += """
@@ -147,7 +161,7 @@ private func buildPortGroup(name portName: String, groupIndex: Int, registers: [
     return code
 }
 
-private func buildPortRegister(register: SVDRegister, portName: String, groupIndex: Int) -> String {
+private func buildPortRegister(register: SVDRegister, portName: String, groupIndex: Int, documentation: ChipDocumentationLoader?) -> String {
     if let dim = register.dim, dim > 1, register.dimIncrement == 1 {
         return (0..<dim)
             .map { index in
@@ -155,37 +169,54 @@ private func buildPortRegister(register: SVDRegister, portName: String, groupInd
                     register: register,
                     portName: portName,
                     groupIndex: groupIndex,
-                    elementIndex: index
+                    elementIndex: index,
+                    documentation: documentation
                 )
             }
             .joined()
     }
 
-    return buildRegisterProperty(register: register, portName: portName, groupIndex: groupIndex)
+    return buildRegisterProperty(
+        register: register,
+        portName: portName,
+        groupIndex: groupIndex,
+        documentation: documentation
+    )
 }
 
 private func buildRegisterProperty(
     register: SVDRegister,
     portName: String,
     groupIndex: Int,
-    elementIndex: Int? = nil
+    elementIndex: Int? = nil,
+    documentation: ChipDocumentationLoader? = nil
 ) -> String {
-    guard let variableName = gpioRegisterVariableName(for: register, elementIndex: elementIndex),
-          let addressOffset = register.addressOffset else {
+    guard let addressOffset = register.addressOffset else {
         return ""
     }
 
     let registerName = displayRegisterName(register.name, elementIndex: elementIndex)
-    let description = register.description ?? registerName
+    let suppData = documentation?.supplementalData(for: register)
+    let variableName = suppData?.variableName ?? gpioRegisterVariableName(for: register, elementIndex: elementIndex) ?? ""
+    guard variableName.isEmpty == false else {
+        return ""
+    }
+
     let offset = addressOffset + UInt64(elementIndex ?? 0) * (register.dimIncrement ?? 0)
     let addressExpression = registerAddressExpression(baseName: "\(portName)_BASE", offset: offset)
-    let access = register.access ?? "read-write"
+    let access = suppData?.access ?? register.access ?? "read-write"
     let isReadOnly = access == "read-only"
-    let documentation = makeRegisterDocumentation(registerName: registerName, description: description, register: register)
+    let registerDocumentation: String
+    if let suppDocs = suppData?.documentation, suppDocs.isEmpty == false {
+        registerDocumentation = makeDocumentationComment(body: suppDocs)
+    } else {
+        let description = register.description ?? registerName
+        registerDocumentation = makeRegisterDocumentation(registerName: registerName, description: description, register: register)
+    }
 
     return """
 
-            \(documentation)
+            \(registerDocumentation)
             @inline(__always)
             static var \(variableName): UInt32 {
     \(buildGetter(addressExpression: addressExpression, offset: offset, registerSize: register.size ?? 32))

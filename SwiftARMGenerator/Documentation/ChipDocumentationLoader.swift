@@ -93,7 +93,7 @@ class ChipDocumentationLoader {
 
         return try perform()
     }
-    
+
     @discardableResult
     func loadGeneral() -> Bool {
         generalDocumentation = nil
@@ -101,21 +101,21 @@ class ChipDocumentationLoader {
         guard let fileURL = directory?.appendingPathComponent("general.json") else {
             return false
         }
-        
+
         guard let data = try? Data(contentsOf: fileURL) else {
             return false
         }
-        
+
         guard let decodedData = try? JSONDecoder().decode(GeneralDocumentation.self, from: data) else {
             return false
         }
-        
+
         generalDocumentation = decodedData
         return true
     }
-    
+
     /// Loads supplemental documentation for a specific chip from a JSON file.
-    /// - Parameter chipName: The name of the chip (e.g., "ATmega328P").
+    /// - Parameter chipName: The name of the chip (e.g., "ATSAMD21E18A").
     /// - Returns: `true` if the documentation was successfully loaded, `false` otherwise.
     /// - Note: The JSON file must be named `<chipName>.json` and located in the configured directory.
     @discardableResult
@@ -131,21 +131,21 @@ class ChipDocumentationLoader {
         guard let fileURL = directory?.appendingPathComponent("\(chipName).json") else {
             return false
         }
-        
+
         guard let data = try? Data(contentsOf: fileURL) else {
             return false
         }
-        
+
         guard let decodedData = try? JSONDecoder().decode(ChipDocumentation.self, from: data) else {
             return false
         }
-        
+
         chipDocumentation = decodedData
-        
+
         return true
     }
-    
-    func supplementalData(for register: AVRModules.Module.RegisterGroup.Register) -> SupplementalRegisterData {
+
+    func supplementalData(for register: SVDRegister) -> SupplementalRegisterData {
         if let cachedData = registerCache[register.name] {
             return cachedData
         }
@@ -159,13 +159,13 @@ class ChipDocumentationLoader {
             return fallbackData
         }
 
-        let fallbackVariableName = getVariableName(caption: register.caption ?? register.name)
+        let fallbackVariableName = getVariableName(caption: register.description ?? register.name)
         let resolvedData = SupplementalRegisterData(
             variableName: preferredVariableName(chipDocs?.variableName, generalDocs?.variableName, fallback: fallbackVariableName),
             valueType: chipDocs?.valueType ?? generalDocs?.valueType ?? "",
             defaultValue: chipDocs?.defaultValue ?? generalDocs?.defaultValue ?? "",
             documentation: formatDocumentation(chipDocs?.documentation),
-            access: chipDocs?.access ?? generalDocs?.access ?? register.rw ?? "R/W",
+            access: chipDocs?.access ?? generalDocs?.access ?? register.access ?? "read-write",
             documentationL: formatOptionalDocumentation(chipDocs?.documentationL),
             documentationH: formatOptionalDocumentation(chipDocs?.documentationH),
             initialValues: formatInitialValues(chipDocs?.initialValues),
@@ -177,48 +177,48 @@ class ChipDocumentationLoader {
         registerCache[register.name] = resolvedData
         return resolvedData
     }
-    
-    func supplementalData(for bitfield: AVRModules.Module.RegisterGroup.Register.Bitfield) -> SupplementalBitfieldData {
-        if let cachedData = bitfieldCache[bitfield.name] {
+
+    func supplementalData(for field: SVDField) -> SupplementalBitfieldData {
+        if let cachedData = bitfieldCache[field.name] {
             return cachedData
         }
 
-        let chipDocs = chipDocumentation?.bitfields[bitfield.name]
-        let generalDocs = generalBitfield(for: bitfield.name)
+        let chipDocs = chipDocumentation?.bitfields[field.name]
+        let generalDocs = generalBitfield(for: field.name)
 
         guard chipDocs != nil || generalDocs != nil else {
-            let fallbackData = missingSupplementalData(for: bitfield)
-            bitfieldCache[bitfield.name] = fallbackData
+            let fallbackData = missingSupplementalData(for: field)
+            bitfieldCache[field.name] = fallbackData
             return fallbackData
         }
 
-        let fallbackVariableName = getVariableName(caption: bitfield.caption ?? bitfield.name)
+        let fallbackVariableName = getVariableName(caption: field.description ?? field.name)
         let rawValueType = chipDocs?.valueType ?? generalDocs?.valueType ?? ""
-        let inferredValueType = inferValueTypeIfNeeded(rawValueType, bitfield: bitfield)
+        let inferredValueType = inferValueTypeIfNeeded(rawValueType, field: field)
         let resolvedData = SupplementalBitfieldData(
             variableName: preferredVariableName(chipDocs?.variableName, generalDocs?.variableName, fallback: fallbackVariableName),
             valueType: inferredValueType,
             defaultValue: chipDocs?.defaultValue ?? generalDocs?.defaultValue ?? "",
             documentation: formatDocumentation(chipDocs?.documentation),
-            access: Access(rawValue: chipDocs?.access ?? generalDocs?.access ?? bitfield.rw ?? "") ?? .readWrite,
+            access: accessFromSVD(chipDocs?.access ?? generalDocs?.access ?? field.access ?? "read-write"),
             inline: preferredInline(chipDocs?.inline, generalDocs?.inline),
             splitTargetLSB: chipDocs?.splitTargetLSB,
             overrideGeneratedDocumentation: chipDocs?.overrideGeneratedDocumentation ?? false
         )
 
-        bitfieldCache[bitfield.name] = resolvedData
+        bitfieldCache[field.name] = resolvedData
         return resolvedData
     }
 
-    func boardConfiguration(for device: AVRToolsDeviceFile) -> BoardConfiguration {
+    func boardConfiguration(for device: SVDDevice) -> BoardConfiguration {
         let boardOverrides = chipDocumentation?.board
 
         return BoardConfiguration(
-            ramSize: boardOverrides?.ramSize ?? device.memorySegmentSize(named: "IRAM", type: "ram") ?? 0,
-            flashSize: boardOverrides?.flashSize ?? device.memorySegmentSize(named: "FLASH", type: "flash") ?? 0,
-            eepromSize: boardOverrides?.eepromSize ?? device.memorySegmentSize(named: "EEPROM", type: "eeprom"),
+            ramSize: boardOverrides?.ramSize ?? 0,
+            flashSize: boardOverrides?.flashSize ?? 0,
+            eepromSize: boardOverrides?.eepromSize,
             baud: boardOverrides?.baud ?? 115200,
-            cpuFrequency: boardOverrides?.cpuFrequency ?? device.maximumClockFrequency ?? 16000000
+            cpuFrequency: boardOverrides?.cpuFrequency ?? 16000000
         )
     }
 
@@ -271,16 +271,18 @@ class ChipDocumentationLoader {
         currentPeripheralName ?? uncategorizedPeripheralName
     }
 
-    private func missingSupplementalData(for register: AVRModules.Module.RegisterGroup.Register) -> SupplementalRegisterData {
-        let suggestedVariableName = getVariableName(caption: register.caption ?? register.name)
+    private func missingSupplementalData(for register: SVDRegister) -> SupplementalRegisterData {
+        let suggestedVariableName = getVariableName(caption: register.description ?? register.name)
 
         let peripheralName = activePeripheralName()
         var missingRegisters = missingRegistersByPeripheral[peripheralName] ?? [:]
 
+        let offsetString: String = register.addressOffset.map { "0x" + String($0, radix: 16, uppercase: true) } ?? "unknown"
+
         missingRegisters[register.name] = MissingRegisterLog(
             name: register.name,
-            caption: register.caption ?? "",
-            offset: register.offset,
+            caption: register.description ?? "",
+            offset: offsetString,
             suggestedVariableName: suggestedVariableName
         )
         missingRegistersByPeripheral[peripheralName] = missingRegisters
@@ -290,21 +292,23 @@ class ChipDocumentationLoader {
             valueType: "",
             defaultValue: "",
             documentation: "",
-            access: register.rw ?? "R/W",
+            access: register.access ?? "read-write",
             isMissing: true
         )
     }
 
-    private func missingSupplementalData(for bitfield: AVRModules.Module.RegisterGroup.Register.Bitfield) -> SupplementalBitfieldData {
-        let suggestedVariableName = getVariableName(caption: bitfield.caption ?? bitfield.name)
+    private func missingSupplementalData(for field: SVDField) -> SupplementalBitfieldData {
+        let suggestedVariableName = getVariableName(caption: field.description ?? field.name)
 
         let peripheralName = activePeripheralName()
         var missingBitfields = missingBitfieldsByPeripheral[peripheralName] ?? [:]
 
-        missingBitfields[bitfield.name] = MissingBitfieldLog(
-            name: bitfield.name,
-            caption: bitfield.caption ?? "",
-            mask: Int(bitfield.mask.value).toHex(),
+        let maskString = svdFieldMaskHex(field: field)
+
+        missingBitfields[field.name] = MissingBitfieldLog(
+            name: field.name,
+            caption: field.description ?? "",
+            mask: maskString,
             suggestedVariableName: suggestedVariableName
         )
         missingBitfieldsByPeripheral[peripheralName] = missingBitfields
@@ -314,28 +318,52 @@ class ChipDocumentationLoader {
             valueType: "",
             defaultValue: "",
             documentation: "",
-            access: Access(rawValue: bitfield.rw ?? "") ?? .readWrite
+            access: accessFromSVD(field.access ?? "read-write")
         )
     }
 
-    private func inferValueTypeIfNeeded(_ valueType: String, bitfield: AVRModules.Module.RegisterGroup.Register.Bitfield) -> String {
+    private func inferValueTypeIfNeeded(_ valueType: String, field: SVDField) -> String {
         guard inferValueTypes else { return valueType }
         guard valueType.isEmpty else { return valueType }
 
-        let mask = bitfield.mask.value
-        let bitCount = mask.nonzeroBitCount
+        let bitWidth = field.bitWidth ?? 0
 
-        // Single-bit fields are represented as Bool regardless of bit position.
-        if bitCount == 1 {
+        if bitWidth == 1 {
             return "Bool"
         }
 
-        // Only infer UInt8 for multi-bit fields whose mask fits in the low byte.
-        if mask <= 0xFF {
+        if bitWidth <= 8 {
             return "UInt8"
         }
 
-        // For wider masks, do not infer a type yet.
         return valueType
     }
+
+    private func svdFieldMaskHex(field: SVDField) -> String {
+        guard let bitOffset = field.bitOffset, let bitWidth = field.bitWidth, bitWidth > 0 else {
+            return "0x0"
+        }
+
+        let maskValue = ((UInt64(1) << bitWidth) - 1) << bitOffset
+        return hexLiteral(maskValue)
+    }
+
+    private func accessFromSVD(_ accessString: String) -> Access {
+        switch accessString.lowercased() {
+        case "read-only", "r":
+            return .read
+        case "write-only", "w":
+            return .write
+        default:
+            return .readWrite
+        }
+    }
+}
+
+struct BoardConfiguration {
+    let ramSize: Int
+    let flashSize: Int
+    let eepromSize: Int?
+    let baud: Int
+    let cpuFrequency: Int
 }
