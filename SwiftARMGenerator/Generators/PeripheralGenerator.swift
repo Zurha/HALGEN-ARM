@@ -15,10 +15,17 @@ protocol PeripheralGenerator {
 
     /// Generates code files for the specified device.
     func generate(device: SVDDevice) -> [GeneratedCodeFile]
+
+    /// Generates code files for the specified device, with access to supplemental documentation.
+    func generate(device: SVDDevice, documentation: ChipDocumentationLoader) -> [GeneratedCodeFile]
 }
 
 extension PeripheralGenerator {
     var logName: String {
         name
+    }
+
+    func generate(device: SVDDevice, documentation: ChipDocumentationLoader) -> [GeneratedCodeFile] {
+        generate(device: device)
     }
 }

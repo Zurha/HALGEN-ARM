@@ -52,8 +52,13 @@ struct SVDCodeGenerator {
     let documentationDirectory: URL?
 
     func generate(for decodedFile: DecodedSVDFile) -> GeneratedDeviceOutput {
+        let loader = ChipDocumentationLoader()
+        loader.directory = documentationDirectory
+        loader.load(chipName: decodedFile.device.name)
+        loader.loadGeneral()
+
         let pipeline = GenerationPipeline()
-        let generatedFiles = pipeline.run(device: decodedFile.device)
+        let generatedFiles = pipeline.run(device: decodedFile.device, documentation: loader)
         let moduleName = decodedFile.device.generatedSwiftModuleName
 
         return GeneratedDeviceOutput(

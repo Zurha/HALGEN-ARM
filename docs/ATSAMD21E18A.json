@@ -2,13 +2,14 @@
   "chip": "ATSAMD21E18A",
   "datasheet": "Microchip ATSAMD21 family datasheet",
   "registers": {
-    "PORT.DIR%s": {
-      "variableName": "direction",
+    "DIR%s": {
+      "variableName": "dataDirection",
       "valueType": "UInt32",
       "defaultValue": "0x00000000",
       "access": "read-write",
       "documentation": [
-        "Loaded from the ARM documentation loader example. Each bit controls whether the corresponding PORT pin is configured as an input or output."
+        "Port Data Direction register.",
+        "Each bit controls whether the corresponding PORT pin is configured as an input (0) or output (1)."
       ]
     }
   },

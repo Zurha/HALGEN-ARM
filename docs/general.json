@@ -1,0 +1,11 @@
+{
+  "registers": [
+    {
+      "aliases": ["CTRLA"],
+      "variableName": "controlA",
+      "valueType": "UInt32",
+      "access": "read-write"
+    }
+  ],
+  "bitfields": []
+}
