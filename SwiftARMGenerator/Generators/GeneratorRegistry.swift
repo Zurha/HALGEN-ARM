@@ -8,6 +8,7 @@
 struct GeneratorRegistry {
     static let allGenerators: [PeripheralGenerator] = [
         GPIOGenerator(),
+        GenericClockControllerGenerator(),
         SERCOMGenerator()
     ]
 }

@@ -13,6 +13,7 @@ struct ChipDocumentation: Codable {
     let board: Board?
     let registers: [String: Register]
     let bitfields: [String: Bitfield]
+    let enumValues: [String: [String: EnumValue]]?
 
     struct Board: Codable {
         let ramSize: Int?
@@ -73,6 +74,18 @@ struct ChipDocumentation: Codable {
                 inline: inline ?? "__always",
                 splitTargetLSB: splitTargetLSB,
                 overrideGeneratedDocumentation: overrideGeneratedDocumentation ?? false
+            )
+        }
+    }
+
+    struct EnumValue: Codable {
+        let caseName: String?
+        let documentation: [String]?
+
+        func toSupplementalData() -> SupplementalEnumValueData {
+            SupplementalEnumValueData(
+                caseName: caseName ?? "",
+                documentation: formatDocumentation(documentation)
             )
         }
     }

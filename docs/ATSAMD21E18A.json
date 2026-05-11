@@ -11,7 +11,181 @@
         "Port Data Direction register.",
         "Each bit controls whether the corresponding PORT pin is configured as an input (0) or output (1)."
       ]
+    },
+    "GCLK.CTRL": {
+      "variableName": "controlRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "GCLK.STATUS": {
+      "variableName": "statusRegister",
+      "valueType": "UInt32",
+      "access": "read-only"
+    },
+    "GCLK.CLKCTRL": {
+      "variableName": "clockControlRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL": {
+      "variableName": "generatorControl",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "GCLK.GENDIV": {
+      "variableName": "generatorDivision",
+      "valueType": "UInt32",
+      "access": "read-write"
     }
   },
-  "bitfields": {}
+  "bitfields": {
+    "GCLK.CTRL.SWRST": {
+      "variableName": "softwareReset",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "GCLK.STATUS.SYNCBUSY": {
+      "variableName": "synchronizationBusy",
+      "valueType": "Bool",
+      "access": "read-only"
+    },
+    "GCLK.CLKCTRL.ID": {
+      "variableName": "peripheralClockID",
+      "valueType": "PeripheralClockID",
+      "defaultValue": "dfll48MReference",
+      "access": "read-write"
+    },
+    "GCLK.CLKCTRL.GEN": {
+      "variableName": "clockGenerator",
+      "valueType": "Generator",
+      "defaultValue": "generator0",
+      "access": "read-write"
+    },
+    "GCLK.CLKCTRL.CLKEN": {
+      "variableName": "clockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "GCLK.CLKCTRL.WRTLOCK": {
+      "variableName": "writeLock",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL.ID": {
+      "variableName": "generatorID",
+      "valueType": "Generator",
+      "defaultValue": "generator0",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL.SRC": {
+      "variableName": "clockSource",
+      "valueType": "ClockSource",
+      "defaultValue": "internalOscillator8M",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL.GENEN": {
+      "variableName": "generatorEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL.IDC": {
+      "variableName": "improveDutyCycle",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL.OOV": {
+      "variableName": "outputOffValue",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL.OE": {
+      "variableName": "outputEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL.DIVSEL": {
+      "variableName": "divideSelection",
+      "valueType": "DivideSelection",
+      "defaultValue": "linear",
+      "access": "read-write"
+    },
+    "GCLK.GENCTRL.RUNSTDBY": {
+      "variableName": "runInStandby",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "GCLK.GENDIV.ID": {
+      "variableName": "divisionGeneratorID",
+      "valueType": "Generator",
+      "defaultValue": "generator0",
+      "access": "read-write"
+    },
+    "GCLK.GENDIV.DIV": {
+      "variableName": "divisionFactor",
+      "valueType": "UInt32",
+      "access": "read-write"
+    }
+  },
+  "enumValues": {
+    "GCLK.CLKCTRL.GEN": {
+      "GCLK0": { "caseName": "generator0" },
+      "GCLK1": { "caseName": "generator1" },
+      "GCLK2": { "caseName": "generator2" },
+      "GCLK3": { "caseName": "generator3" },
+      "GCLK4": { "caseName": "generator4" },
+      "GCLK5": { "caseName": "generator5" },
+      "GCLK6": { "caseName": "generator6" },
+      "GCLK7": { "caseName": "generator7" },
+      "GCLK8": { "caseName": "generator8" }
+    },
+    "GCLK.GENCTRL.SRC": {
+      "XOSC": { "caseName": "externalCrystalOscillator" },
+      "GCLKIN": { "caseName": "generatorInputPad" },
+      "GCLKGEN1": { "caseName": "genericClockGenerator1" },
+      "OSCULP32K": { "caseName": "ultraLowPower32K" },
+      "OSC32K": { "caseName": "internalOscillator32K" },
+      "XOSC32K": { "caseName": "externalCrystalOscillator32K" },
+      "OSC8M": { "caseName": "internalOscillator8M" },
+      "DFLL48M": { "caseName": "dfll48M" },
+      "DPLL96M": { "caseName": "fdpll96M" }
+    },
+    "GCLK.CLKCTRL.ID": {
+      "DFLL48": { "caseName": "dfll48MReference" },
+      "FDPLL": { "caseName": "fdpll96MReference" },
+      "FDPLL32K": { "caseName": "fdpll96MLockTimer" },
+      "WDT": { "caseName": "watchdogTimer" },
+      "RTC": { "caseName": "realTimeCounter" },
+      "EIC": { "caseName": "externalInterruptController" },
+      "USB": { "caseName": "usb" },
+      "EVSYS_0": { "caseName": "eventSystemChannel0" },
+      "EVSYS_1": { "caseName": "eventSystemChannel1" },
+      "EVSYS_2": { "caseName": "eventSystemChannel2" },
+      "EVSYS_3": { "caseName": "eventSystemChannel3" },
+      "EVSYS_4": { "caseName": "eventSystemChannel4" },
+      "EVSYS_5": { "caseName": "eventSystemChannel5" },
+      "EVSYS_6": { "caseName": "eventSystemChannel6" },
+      "EVSYS_7": { "caseName": "eventSystemChannel7" },
+      "EVSYS_8": { "caseName": "eventSystemChannel8" },
+      "EVSYS_9": { "caseName": "eventSystemChannel9" },
+      "EVSYS_10": { "caseName": "eventSystemChannel10" },
+      "EVSYS_11": { "caseName": "eventSystemChannel11" },
+      "SERCOMX_SLOW": { "caseName": "sercomSlow" },
+      "SERCOM0_CORE": { "caseName": "sercom0Core" },
+      "SERCOM1_CORE": { "caseName": "sercom1Core" },
+      "SERCOM2_CORE": { "caseName": "sercom2Core" },
+      "SERCOM3_CORE": { "caseName": "sercom3Core" },
+      "SERCOM4_CORE": { "caseName": "sercom4Core" },
+      "SERCOM5_CORE": { "caseName": "sercom5Core" },
+      "TCC0_TCC1": { "caseName": "tcc0AndTcc1" },
+      "TCC2_TC3": { "caseName": "tcc2AndTc3" },
+      "TC4_TC5": { "caseName": "tc4AndTc5" },
+      "TC6_TC7": { "caseName": "tc6AndTc7" },
+      "ADC": { "caseName": "analogToDigitalConverter" },
+      "AC_DIG": { "caseName": "analogComparatorDigital" },
+      "AC_ANA": { "caseName": "analogComparatorAnalog" },
+      "DAC": { "caseName": "digitalToAnalogConverter" },
+      "I2S_0": { "caseName": "i2sSerialClock0" },
+      "I2S_1": { "caseName": "i2sSerialClock1" }
+    }
+  }
 }

@@ -30,6 +30,12 @@ struct SupplementalBitfieldData {
     var inline: String = "__always"
     var splitTargetLSB: String? = nil
     var overrideGeneratedDocumentation: Bool = false
+    var isMissing: Bool = false
+}
+
+struct SupplementalEnumValueData {
+    let caseName: String
+    let documentation: String
 }
 
 enum Access: String {
