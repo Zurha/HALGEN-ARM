@@ -36,6 +36,76 @@
       "variableName": "generatorDivision",
       "valueType": "UInt32",
       "access": "read-write"
+    },
+    "PM.CTRL": {
+      "variableName": "controlRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.SLEEP": {
+      "variableName": "sleepRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.CPUSEL": {
+      "variableName": "cpuClockSelectRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.APBASEL": {
+      "variableName": "apbaClockSelectRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.APBBSEL": {
+      "variableName": "apbbClockSelectRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.APBCSEL": {
+      "variableName": "apbcClockSelectRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.AHBMASK": {
+      "variableName": "ahbMaskRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.APBAMASK": {
+      "variableName": "apbaMaskRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.APBBMASK": {
+      "variableName": "apbbMaskRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.APBCMASK": {
+      "variableName": "apbcMaskRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.INTENCLR": {
+      "variableName": "interruptEnableClearRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.INTENSET": {
+      "variableName": "interruptEnableSetRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.INTFLAG": {
+      "variableName": "interruptFlagRegister",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "PM.RCAUSE": {
+      "variableName": "resetCauseRegister",
+      "valueType": "UInt32",
+      "access": "read-only"
     }
   },
   "bitfields": {
@@ -124,6 +194,271 @@
       "variableName": "divisionFactor",
       "valueType": "UInt32",
       "access": "read-write"
+    },
+    "PM.SLEEP.IDLE": {
+      "variableName": "idleMode",
+      "valueType": "IdleMode",
+      "defaultValue": "cpu",
+      "access": "read-write"
+    },
+    "PM.CPUSEL.CPUDIV": {
+      "variableName": "cpuDivider",
+      "valueType": "ClockDivider",
+      "defaultValue": "div1",
+      "access": "read-write"
+    },
+    "PM.APBASEL.APBADIV": {
+      "variableName": "apbaDivider",
+      "valueType": "ClockDivider",
+      "defaultValue": "div1",
+      "access": "read-write"
+    },
+    "PM.APBBSEL.APBBDIV": {
+      "variableName": "apbbDivider",
+      "valueType": "ClockDivider",
+      "defaultValue": "div1",
+      "access": "read-write"
+    },
+    "PM.APBCSEL.APBCDIV": {
+      "variableName": "apbcDivider",
+      "valueType": "ClockDivider",
+      "defaultValue": "div1",
+      "access": "read-write"
+    },
+    "PM.AHBMASK.HPB0_": {
+      "variableName": "hpb0ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.AHBMASK.HPB1_": {
+      "variableName": "hpb1ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.AHBMASK.HPB2_": {
+      "variableName": "hpb2ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.AHBMASK.DSU_": {
+      "variableName": "dsuAHBClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.AHBMASK.NVMCTRL_": {
+      "variableName": "nvmctrlAHBClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.AHBMASK.DMAC_": {
+      "variableName": "dmacAHBClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.AHBMASK.USB_": {
+      "variableName": "usbAHBClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBAMASK.PAC0_": {
+      "variableName": "pac0ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBAMASK.PM_": {
+      "variableName": "pmClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBAMASK.SYSCTRL_": {
+      "variableName": "sysctrlClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBAMASK.GCLK_": {
+      "variableName": "gclkClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBAMASK.WDT_": {
+      "variableName": "wdtClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBAMASK.RTC_": {
+      "variableName": "rtcClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBAMASK.EIC_": {
+      "variableName": "eicClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBBMASK.PAC1_": {
+      "variableName": "pac1ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBBMASK.DSU_": {
+      "variableName": "dsuClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBBMASK.NVMCTRL_": {
+      "variableName": "nvmctrlClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBBMASK.PORT_": {
+      "variableName": "portClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBBMASK.DMAC_": {
+      "variableName": "dmacClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBBMASK.USB_": {
+      "variableName": "usbClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBBMASK.HMATRIX_": {
+      "variableName": "hmatrixClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.PAC2_": {
+      "variableName": "pac2ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.EVSYS_": {
+      "variableName": "evsysClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.SERCOM0_": {
+      "variableName": "sercom0ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.SERCOM1_": {
+      "variableName": "sercom1ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.SERCOM2_": {
+      "variableName": "sercom2ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.SERCOM3_": {
+      "variableName": "sercom3ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.TCC0_": {
+      "variableName": "tcc0ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.TCC1_": {
+      "variableName": "tcc1ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.TCC2_": {
+      "variableName": "tcc2ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.TC3_": {
+      "variableName": "tc3ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.TC4_": {
+      "variableName": "tc4ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.TC5_": {
+      "variableName": "tc5ClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.ADC_": {
+      "variableName": "adcClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.AC_": {
+      "variableName": "acClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.DAC_": {
+      "variableName": "dacClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.PTC_": {
+      "variableName": "ptcClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.APBCMASK.I2S_": {
+      "variableName": "i2sClockEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.INTENCLR.CKRDY": {
+      "variableName": "clockReadyInterruptEnableClear",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.INTENSET.CKRDY": {
+      "variableName": "clockReadyInterruptEnableSet",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.INTFLAG.CKRDY": {
+      "variableName": "clockReady",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "PM.RCAUSE.POR": {
+      "variableName": "wasPowerOnReset",
+      "valueType": "Bool",
+      "access": "read-only"
+    },
+    "PM.RCAUSE.BOD12": {
+      "variableName": "wasBrownOut12Reset",
+      "valueType": "Bool",
+      "access": "read-only"
+    },
+    "PM.RCAUSE.BOD33": {
+      "variableName": "wasBrownOut33Reset",
+      "valueType": "Bool",
+      "access": "read-only"
+    },
+    "PM.RCAUSE.EXT": {
+      "variableName": "wasExternalReset",
+      "valueType": "Bool",
+      "access": "read-only"
+    },
+    "PM.RCAUSE.WDT": {
+      "variableName": "wasWatchdogReset",
+      "valueType": "Bool",
+      "access": "read-only"
+    },
+    "PM.RCAUSE.SYST": {
+      "variableName": "wasSystemReset",
+      "valueType": "Bool",
+      "access": "read-only"
     }
   },
   "enumValues": {

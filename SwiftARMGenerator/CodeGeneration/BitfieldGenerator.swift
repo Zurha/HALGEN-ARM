@@ -35,6 +35,7 @@ func generateSVDBitfieldAccessors(
     register: SVDRegister,
     parentExpression: String,
     indentation: Int,
+    writeBehavior: SVDRegisterWriteBehavior = .normal,
     bitfieldData: (_ field: SVDField) -> SupplementalBitfieldData
 ) -> String {
     guard register.fields.isEmpty == false else {
@@ -76,7 +77,8 @@ func generateSVDBitfieldAccessors(
                 fieldType: fieldType,
                 parentExpression: parentExpression,
                 bitOffset: bitOffset,
-                bitWidth: bitWidth
+                bitWidth: bitWidth,
+                writeBehavior: writeBehavior
             )
         let getterBody = svdIndent(getterExpr, by: indentation + 8)
         let setterBody = setterExpr.map { svdIndent($0, by: indentation + 8) }
@@ -154,8 +156,18 @@ private func svdBitfieldSetterSource(
     fieldType: String,
     parentExpression: String,
     bitOffset: Int,
-    bitWidth: Int
+    bitWidth: Int,
+    writeBehavior: SVDRegisterWriteBehavior
 ) -> String {
+    if writeBehavior == .writeOneToClear {
+        return svdDirectBitfieldSetterSource(
+            fieldType: fieldType,
+            parentExpression: parentExpression,
+            bitOffset: bitOffset,
+            bitWidth: bitWidth
+        )
+    }
+
     switch fieldType {
     case "Bool":
         return "\(parentExpression) = newValue ? (\(parentExpression) | (UInt32(1) << \(bitOffset))) : (\(parentExpression) & ~(UInt32(1) << \(bitOffset)))"
@@ -168,5 +180,25 @@ private func svdBitfieldSetterSource(
     default:
         let mask = hexLiteral(svdBitfieldMask(bitWidth: bitWidth))
         return "\(parentExpression) = (\(parentExpression) & ~(UInt32(\(mask)) << \(bitOffset))) | ((newValue.rawValue & \(mask)) << \(bitOffset))"
+    }
+}
+
+private func svdDirectBitfieldSetterSource(
+    fieldType: String,
+    parentExpression: String,
+    bitOffset: Int,
+    bitWidth: Int
+) -> String {
+    let mask = hexLiteral(svdBitfieldMask(bitWidth: bitWidth))
+
+    switch fieldType {
+    case "Bool":
+        return "if newValue { \(parentExpression) = UInt32(1) << \(bitOffset) }"
+    case "UInt32":
+        return "if newValue != 0 { \(parentExpression) = (newValue & \(mask)) << \(bitOffset) }"
+    case "UInt8", "UInt16":
+        return "if newValue != 0 { \(parentExpression) = (UInt32(newValue) & \(mask)) << \(bitOffset) }"
+    default:
+        return "if newValue.rawValue != 0 { \(parentExpression) = (newValue.rawValue & \(mask)) << \(bitOffset) }"
     }
 }

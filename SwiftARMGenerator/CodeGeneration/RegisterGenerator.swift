@@ -21,6 +21,7 @@ func generateSVDRegister(
     register: SVDRegister,
     baseName: String,
     indentation: Int,
+    writeBehavior: SVDRegisterWriteBehavior = .normal,
     registerData: (_ register: SVDRegister) -> SupplementalRegisterData,
     bitfieldData: (_ field: SVDField) -> SupplementalBitfieldData
 ) -> String {
@@ -50,7 +51,7 @@ func generateSVDRegister(
             addressExpression: addressExpression,
             offset: addressOffset,
             registerSize: registerSize,
-            writeBehavior: .normal
+            writeBehavior: writeBehavior
         ),
         by: indentation + 4
     )
@@ -63,6 +64,7 @@ func generateSVDRegister(
         register: register,
         parentExpression: variableName,
         indentation: indentation,
+        writeBehavior: writeBehavior,
         bitfieldData: bitfieldData
     )
 
