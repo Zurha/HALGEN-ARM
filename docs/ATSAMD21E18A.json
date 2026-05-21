@@ -106,9 +106,202 @@
       "variableName": "resetCauseRegister",
       "valueType": "UInt32",
       "access": "read-only"
+    },
+    "DMAC.CTRL": {
+      "variableName": "control",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CRCCTRL": {
+      "variableName": "crcControl",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CRCDATAIN": {
+      "variableName": "crcDataInput",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CRCCHKSUM": {
+      "variableName": "crcChecksum",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CRCSTATUS": {
+      "variableName": "crcStatus",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.DBGCTRL": {
+      "variableName": "debugControl",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.QOSCTRL": {
+      "variableName": "qosControl",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.SWTRIGCTRL": {
+      "variableName": "softwareTriggerControl",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.PRICTRL0": {
+      "variableName": "priorityControl0",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.INTPEND": {
+      "variableName": "interruptPending",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.INTSTATUS": {
+      "variableName": "interruptStatus",
+      "valueType": "UInt32",
+      "access": "read-only"
+    },
+    "DMAC.BUSYCH": {
+      "variableName": "busyChannels",
+      "valueType": "UInt32",
+      "access": "read-only"
+    },
+    "DMAC.PENDCH": {
+      "variableName": "pendingChannels",
+      "valueType": "UInt32",
+      "access": "read-only"
+    },
+    "DMAC.ACTIVE": {
+      "variableName": "active",
+      "valueType": "UInt32",
+      "access": "read-only"
+    },
+    "DMAC.BASEADDR": {
+      "variableName": "descriptorBaseAddress",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.WRBADDR": {
+      "variableName": "writeBackBaseAddress",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CHID": {
+      "variableName": "channelID",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CHCTRLA": {
+      "variableName": "channelControlA",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CHCTRLB": {
+      "variableName": "channelControlB",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CHINTENCLR": {
+      "variableName": "channelInterruptEnableClear",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CHINTENSET": {
+      "variableName": "channelInterruptEnableSet",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CHINTFLAG": {
+      "variableName": "channelInterruptFlag",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.CHSTATUS": {
+      "variableName": "channelStatus",
+      "valueType": "UInt32",
+      "access": "read-only"
     }
   },
   "bitfields": {
+    "DMAC.CTRL.SWRST": {
+      "variableName": "softwareReset",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CTRL.DMAENABLE": {
+      "variableName": "dmaEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CTRL.CRCENABLE": {
+      "variableName": "crcEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CTRL.LVLEN0": {
+      "variableName": "priorityLevel0Enable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CTRL.LVLEN1": {
+      "variableName": "priorityLevel1Enable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CTRL.LVLEN2": {
+      "variableName": "priorityLevel2Enable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CTRL.LVLEN3": {
+      "variableName": "priorityLevel3Enable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CHID.ID": {
+      "variableName": "selectedChannelID",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.INTPEND.ID": {
+      "variableName": "pendingChannelID",
+      "valueType": "UInt32",
+      "access": "read-write"
+    },
+    "DMAC.ACTIVE.ID": {
+      "variableName": "activeChannelID",
+      "valueType": "UInt32",
+      "access": "read-only"
+    },
+    "DMAC.CHCTRLA.SWRST": {
+      "variableName": "channelSoftwareReset",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CHCTRLA.ENABLE": {
+      "variableName": "channelEnable",
+      "valueType": "Bool",
+      "access": "read-write"
+    },
+    "DMAC.CHCTRLB.LVL": {
+      "variableName": "channelArbitrationLevel",
+      "valueType": "PriorityLevel",
+      "defaultValue": "level0",
+      "access": "read-write"
+    },
+    "DMAC.CHCTRLB.TRIGSRC": {
+      "variableName": "triggerSource",
+      "valueType": "TriggerSource",
+      "defaultValue": "disabled",
+      "access": "read-write"
+    },
+    "DMAC.CHCTRLB.TRIGACT": {
+      "variableName": "triggerAction",
+      "valueType": "TriggerAction",
+      "defaultValue": "block",
+      "access": "read-write"
+    },
     "GCLK.CTRL.SWRST": {
       "variableName": "softwareReset",
       "valueType": "Bool",

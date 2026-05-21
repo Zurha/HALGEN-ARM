@@ -10,6 +10,7 @@ struct GeneratorRegistry {
         GPIOGenerator(),
         GenericClockControllerGenerator(),
         PowerManagerGenerator(),
-        SERCOMGenerator()
+        SERCOMGenerator(),
+        DMACGenerator()
     ]
 }

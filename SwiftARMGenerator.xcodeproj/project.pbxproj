@@ -18,11 +18,13 @@
 		EEA200000000000000000006 /* SERCOM.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000006 /* SERCOM.swift */; };
 		EEA200000000000000000009 /* GenericClockController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000009 /* GenericClockController.swift */; };
 		EEA20000000000000000000A /* PowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA10000000000000000000A /* PowerManager.swift */; };
+		EEA20000000000000000000B /* DMAC.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA10000000000000000000B /* DMAC.swift */; };
 		EEA200000000000000000007 /* RegisterGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000007 /* RegisterGenerator.swift */; };
 		EEA200000000000000000008 /* BitfieldGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA100000000000000000008 /* BitfieldGenerator.swift */; };
 		09BDF2C899F873D13C4A098E /* ChipDocumentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71ADE5ED95CCFC3E5786867C /* ChipDocumentation.swift */; };
 		B9580F2C21ABD3F64DCAEFA6 /* GeneralDocumentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D9CC48062F501F0F172000 /* GeneralDocumentation.swift */; };
 		D40F4C67532C14CF194495F3 /* ChipDocumentationLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9627A9CD5EBA9BBFC607292 /* ChipDocumentationLoader.swift */; };
+		EEA20000000000000000000C /* BoilerplateTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA10000000000000000000C /* BoilerplateTemplate.swift */; };
 		664A3209249F4495D654F6BF /* SupplementalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4612798196F827810A9E48C7 /* SupplementalData.swift */; };
 		8E493230C04C212E71266B0B /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBD5722218460EE82C126620 /* Utils.swift */; };
 /* End PBXBuildFile section */
@@ -39,11 +41,13 @@
 		EEA100000000000000000006 /* SERCOM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/Peripherals/SERCOM.swift; sourceTree = SOURCE_ROOT; };
 		EEA100000000000000000009 /* GenericClockController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/Peripherals/GenericClockController.swift; sourceTree = SOURCE_ROOT; };
 		EEA10000000000000000000A /* PowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/Peripherals/PowerManager.swift; sourceTree = SOURCE_ROOT; };
+		EEA10000000000000000000B /* DMAC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Generators/Peripherals/DMAC.swift; sourceTree = SOURCE_ROOT; };
 		EEA100000000000000000007 /* RegisterGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/CodeGeneration/RegisterGenerator.swift; sourceTree = SOURCE_ROOT; };
 		EEA100000000000000000008 /* BitfieldGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/CodeGeneration/BitfieldGenerator.swift; sourceTree = SOURCE_ROOT; };
 		71ADE5ED95CCFC3E5786867C /* ChipDocumentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Documentation/ChipDocumentation.swift; sourceTree = SOURCE_ROOT; };
 		F0D9CC48062F501F0F172000 /* GeneralDocumentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Documentation/GeneralDocumentation.swift; sourceTree = SOURCE_ROOT; };
 		E9627A9CD5EBA9BBFC607292 /* ChipDocumentationLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Documentation/ChipDocumentationLoader.swift; sourceTree = SOURCE_ROOT; };
+		EEA10000000000000000000C /* BoilerplateTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/Documentation/BoilerplateTemplate.swift; sourceTree = SOURCE_ROOT; };
 		4612798196F827810A9E48C7 /* SupplementalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/CodeGeneration/SupplementalData.swift; sourceTree = SOURCE_ROOT; };
 		EBD5722218460EE82C126620 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftARMGenerator/CodeGeneration/Utils.swift; sourceTree = SOURCE_ROOT; };
 		EECLI0192F600000000000001 /* SwiftARMGeneratorCLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SwiftARMGeneratorCLI; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -187,9 +191,11 @@
 				EEA200000000000000000006 /* SERCOM.swift in Sources */,
 				EEA200000000000000000009 /* GenericClockController.swift in Sources */,
 				EEA20000000000000000000A /* PowerManager.swift in Sources */,
+				EEA20000000000000000000B /* DMAC.swift in Sources */,
 				09BDF2C899F873D13C4A098E /* ChipDocumentation.swift in Sources */,
 				B9580F2C21ABD3F64DCAEFA6 /* GeneralDocumentation.swift in Sources */,
 				D40F4C67532C14CF194495F3 /* ChipDocumentationLoader.swift in Sources */,
+				EEA20000000000000000000C /* BoilerplateTemplate.swift in Sources */,
 				664A3209249F4495D654F6BF /* SupplementalData.swift in Sources */,
 				8E493230C04C212E71266B0B /* Utils.swift in Sources */,
 			);
