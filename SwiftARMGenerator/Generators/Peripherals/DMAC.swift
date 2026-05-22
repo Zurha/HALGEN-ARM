@@ -85,7 +85,7 @@ private func buildDMACFile(
 
     for register in registers {
         code += dmacRegisterSectionHeader(for: register)
-        code += generateSVDRegister(
+        code += generateDMACRegister(
             register: register,
             baseName: baseName,
             indentation: 4,
@@ -155,6 +155,153 @@ private func dmacSERCOMInstances(in device: SVDDevice) -> [DMACSERCOMInstance] {
             return DMACSERCOMInstance(name: peripheral.name, index: index)
         }
         .sorted { $0.index < $1.index }
+}
+
+// MARK: - Register Generation
+
+private func generateDMACRegister(
+    register: SVDRegister,
+    baseName: String,
+    indentation: Int,
+    writeBehavior: SVDRegisterWriteBehavior = .normal,
+    registerData: (_ register: SVDRegister) -> SupplementalRegisterData,
+    bitfieldData: (_ field: SVDField) -> SupplementalBitfieldData
+) -> String {
+    guard let addressOffset = register.addressOffset else {
+        return ""
+    }
+
+    let supplementalRegisterData = registerData(register)
+    let variableName = supplementalRegisterData.variableName.isEmpty
+        ? svdRegisterVariableName(for: register)
+        : supplementalRegisterData.variableName
+
+    let access = supplementalRegisterData.access.isEmpty ? register.access ?? "read-write" : supplementalRegisterData.access
+    let registerSize = register.size ?? 32
+    let addressExpression = svdRegisterAddressExpression(baseName: baseName, offset: addressOffset)
+    let spaces = String(repeating: " ", count: indentation)
+    let getter = svdIndent(
+        dmacBuildRegisterGetter(
+            addressExpression: addressExpression,
+            offset: addressOffset,
+            registerSize: registerSize
+        ),
+        by: indentation + 4
+    )
+    let setter = svdAccessIsReadOnly(access) ? "" : svdIndent(
+        dmacBuildRegisterSetter(
+            addressExpression: addressExpression,
+            offset: addressOffset,
+            registerSize: registerSize,
+            writeBehavior: writeBehavior
+        ),
+        by: indentation + 4
+    )
+    let registerDocumentation = svdRegisterDocumentation(
+        register: register,
+        supplementalData: supplementalRegisterData,
+        indentation: indentation
+    )
+    let bitfields = generateSVDBitfieldAccessors(
+        register: register,
+        parentExpression: variableName,
+        indentation: indentation,
+        writeBehavior: writeBehavior,
+        bitfieldData: bitfieldData
+    )
+
+    return """
+    \(registerDocumentation)
+    \(spaces)@inline(__always)
+    \(spaces)static var \(variableName): UInt32 {
+    \(getter)
+    \(setter)
+    \(spaces)}
+
+    \(bitfields)
+    """
+}
+
+private func dmacBuildRegisterGetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
+    switch registerSize {
+    case 8:
+        return """
+        get {
+            UInt32(UnsafeMutablePointer<UInt8>(bitPattern: \(addressExpression))!.pointee)
+        }
+        """
+    case 16:
+        return """
+        get {
+            UInt32(UnsafeMutablePointer<UInt16>(bitPattern: \(addressExpression))!.pointee)
+        }
+        """
+    default:
+        return """
+        get {
+            UnsafeMutablePointer<UInt32>(bitPattern: \(addressExpression))!.pointee
+        }
+        """
+    }
+}
+
+private func dmacBuildRegisterSetter(
+    addressExpression: String,
+    offset: UInt64,
+    registerSize: Int,
+    writeBehavior: SVDRegisterWriteBehavior
+) -> String {
+    if writeBehavior == .writeOneToClear {
+        return dmacBuildDirectRegisterSetter(
+            addressExpression: addressExpression,
+            offset: offset,
+            registerSize: registerSize
+        )
+    }
+
+    switch registerSize {
+    case 8:
+        return """
+        set {
+            UnsafeMutablePointer<UInt8>(bitPattern: \(addressExpression))!.pointee = UInt8(newValue & 0xFF)
+        }
+        """
+    case 16:
+        return """
+        set {
+            UnsafeMutablePointer<UInt16>(bitPattern: \(addressExpression))!.pointee = UInt16(newValue & 0xFFFF)
+        }
+        """
+    default:
+        return """
+        set {
+            UnsafeMutablePointer<UInt32>(bitPattern: \(addressExpression))!.pointee = newValue
+        }
+        """
+    }
+}
+
+private func dmacBuildDirectRegisterSetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
+    switch registerSize {
+    case 8:
+        return """
+        set {
+            UnsafeMutablePointer<UInt8>(bitPattern: \(addressExpression))!.pointee = UInt8(newValue & 0xFF)
+        }
+        """
+    case 16:
+        return """
+        set {
+            UnsafeMutablePointer<UInt16>(bitPattern: \(addressExpression))!.pointee = UInt16(newValue & 0xFFFF)
+        }
+        """
+    default:
+        return """
+        set {
+            UnsafeMutablePointer<UInt32>(bitPattern: \(addressExpression))!.pointee = newValue
+        }
+        """
+    }
 }
 
 // MARK: - Register Generation Data

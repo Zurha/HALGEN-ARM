@@ -68,12 +68,10 @@ func generateSVDRegister(
         bitfieldData: bitfieldData
     )
 
-    let registerSwiftType = "UInt32"
-
     return """
     \(registerDocumentation)
     \(spaces)@inline(__always)
-    \(spaces)static var \(variableName): \(registerSwiftType) {
+    \(spaces)static var \(variableName): UInt32 {
     \(getter)
     \(setter)
     \(spaces)}
@@ -85,21 +83,35 @@ func generateSVDRegister(
 func buildSVDRegisterGetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
     switch registerSize {
     case 8:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x3) * 8
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
         return """
         get {
-            UInt32(UnsafeMutablePointer<UInt8>(bitPattern: \(addressExpression))!.pointee)
+            (_volatileRegisterReadUInt32(\(alignedExpression)) >> \(shift)) & 0x000000FF
         }
         """
     case 16:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x2) * 8
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
         return """
         get {
-            UInt32(UnsafeMutablePointer<UInt16>(bitPattern: \(addressExpression))!.pointee)
+            (_volatileRegisterReadUInt32(\(alignedExpression)) >> \(shift)) & 0x0000FFFF
         }
         """
     default:
         return """
         get {
-            UnsafeMutablePointer<UInt32>(bitPattern: \(addressExpression))!.pointee
+            _volatileRegisterReadUInt32(\(addressExpression))
         }
         """
     }
@@ -121,21 +133,39 @@ func buildSVDRegisterSetter(
 
     switch registerSize {
     case 8:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x3) * 8
+        let mask = UInt64(0xFF) << shift
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
         return """
         set {
-            UnsafeMutablePointer<UInt8>(bitPattern: \(addressExpression))!.pointee = UInt8(newValue & 0xFF)
+            let word = _volatileRegisterReadUInt32(\(alignedExpression))
+            _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFF) << \(shift)))
         }
         """
     case 16:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x2) * 8
+        let mask = UInt64(0xFFFF) << shift
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
         return """
         set {
-            UnsafeMutablePointer<UInt16>(bitPattern: \(addressExpression))!.pointee = UInt16(newValue & 0xFFFF)
+            let word = _volatileRegisterReadUInt32(\(alignedExpression))
+            _volatileRegisterWriteUInt32(\(alignedExpression), (word & \(hexLiteral(~mask & 0xFFFFFFFF, minimumDigits: 8))) | ((newValue & 0xFFFF) << \(shift)))
         }
         """
     default:
         return """
         set {
-            UnsafeMutablePointer<UInt32>(bitPattern: \(addressExpression))!.pointee = newValue
+            _volatileRegisterWriteUInt32(\(addressExpression), newValue)
         }
         """
     }
@@ -144,21 +174,35 @@ func buildSVDRegisterSetter(
 func buildSVDDirectRegisterSetter(addressExpression: String, offset: UInt64, registerSize: Int) -> String {
     switch registerSize {
     case 8:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x3) * 8
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
         return """
         set {
-            UnsafeMutablePointer<UInt8>(bitPattern: \(addressExpression))!.pointee = UInt8(newValue & 0xFF)
+            _volatileRegisterWriteUInt32(\(alignedExpression), (newValue & 0xFF) << \(shift))
         }
         """
     case 16:
+        let alignedOffset = offset & ~0x3
+        let shift = (offset & 0x2) * 8
+        let alignedExpression = svdRegisterAddressExpression(
+            baseName: svdAddressExpressionBase(addressExpression),
+            offset: alignedOffset
+        )
+
         return """
         set {
-            UnsafeMutablePointer<UInt16>(bitPattern: \(addressExpression))!.pointee = UInt16(newValue & 0xFFFF)
+            _volatileRegisterWriteUInt32(\(alignedExpression), (newValue & 0xFFFF) << \(shift))
         }
         """
     default:
         return """
         set {
-            UnsafeMutablePointer<UInt32>(bitPattern: \(addressExpression))!.pointee = newValue
+            _volatileRegisterWriteUInt32(\(addressExpression), newValue)
         }
         """
     }
@@ -197,7 +241,7 @@ func svdAccessIsReadOnly(_ access: String?) -> Bool {
     }
 }
 
-private func svdRegisterDocumentation(
+func svdRegisterDocumentation(
     register: SVDRegister,
     supplementalData: SupplementalRegisterData,
     indentation: Int
@@ -221,6 +265,6 @@ private func svdRegisterDocumentation(
     return svdIndent(lines.joined(separator: "\n"), by: indentation) + "\n"
 }
 
-private func svdRegisterVariableName(for register: SVDRegister) -> String {
+func svdRegisterVariableName(for register: SVDRegister) -> String {
     swiftMemberIdentifier(from: register.displayName ?? register.name)
 }

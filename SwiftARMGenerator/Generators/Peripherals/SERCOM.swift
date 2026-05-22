@@ -443,12 +443,12 @@ private func sercomBuildWriteOneToClearBitfieldSetter(
     let addressExpression = sercomRegisterAddressExpression(baseName: baseName, offset: alignedOffset)
 
     if fieldWidth == 1 {
-        return "set { if newValue { UnsafeMutablePointer<UInt32>(bitPattern: \(addressExpression))!.pointee = UInt32(1) << \(shift) } }"
+        return "set { if newValue { _volatileRegisterWriteUInt32(\(addressExpression), UInt32(1) << \(shift)) } }"
     }
 
     let fieldMask = hexLiteral(svdBitfieldMask(bitWidth: fieldWidth))
     let writeMask = hexLiteral(svdBitfieldMask(bitWidth: fieldWidth) << shift, minimumDigits: 8)
-    return "set { if newValue != 0 { UnsafeMutablePointer<UInt32>(bitPattern: \(addressExpression))!.pointee = ((newValue & \(fieldMask)) << \(shift)) & \(writeMask) } }"
+    return "set { if newValue != 0 { _volatileRegisterWriteUInt32(\(addressExpression), ((newValue & \(fieldMask)) << \(shift)) & \(writeMask)) } }"
 }
 
 private func sercomRegisterAddressExpression(baseName: String, offset: UInt64) -> String {
