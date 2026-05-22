@@ -154,6 +154,114 @@ func getVariableName(caption: String) -> String {
     return ([leadingToken] + remainingTokens).joined()
 }
 
+func swiftMemberIdentifier(from rawValue: String) -> String {
+    let identifier = swiftTypeIdentifier(from: rawValue.trimmingCharacters(in: CharacterSet(charactersIn: "_")))
+    let parts = identifier
+        .split(separator: "_")
+        .map(String.init)
+        .filter { $0.isEmpty == false }
+
+    guard let first = parts.first else {
+        return "_"
+    }
+
+    let memberName = ([swiftLowerCamelIdentifier(from: first)] + parts.dropFirst().map(swiftUpperCamelIdentifier(from:))).joined()
+    guard swiftReservedWords.contains(memberName) == false else {
+        return "\(memberName)Value"
+    }
+
+    return memberName
+}
+
+func swiftLowerCamelIdentifier(from rawValue: String) -> String {
+    switch rawValue {
+    case "RUNSTDBY":
+        return "runStdby"
+    default:
+        return rawValue.lowercased()
+    }
+}
+
+func swiftUpperCamelIdentifier(from rawValue: String) -> String {
+    let cleaned = rawValue.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+    if cleaned == "ENABLE" {
+        return "Enable"
+    }
+
+    guard cleaned.contains("_") else {
+        return cleaned
+    }
+
+    return cleaned
+        .split(separator: "_")
+        .map { part in
+            let lowercased = part.lowercased()
+            guard let first = lowercased.first else {
+                return ""
+            }
+
+            return String(first).uppercased() + lowercased.dropFirst()
+        }
+        .joined()
+}
+
+let swiftReservedWords: Set<String> = [
+    "associatedtype",
+    "class",
+    "deinit",
+    "enum",
+    "extension",
+    "fileprivate",
+    "func",
+    "import",
+    "init",
+    "inout",
+    "internal",
+    "let",
+    "open",
+    "operator",
+    "private",
+    "precedencegroup",
+    "protocol",
+    "public",
+    "rethrows",
+    "static",
+    "struct",
+    "subscript",
+    "super",
+    "typealias",
+    "var",
+    "break",
+    "case",
+    "continue",
+    "default",
+    "defer",
+    "do",
+    "else",
+    "fallthrough",
+    "for",
+    "guard",
+    "if",
+    "in",
+    "repeat",
+    "return",
+    "switch",
+    "where",
+    "while",
+    "as",
+    "any",
+    "catch",
+    "false",
+    "is",
+    "nil",
+    "self",
+    "Self",
+    "throw",
+    "throws",
+    "true",
+    "try"
+]
+
 /// Adds Padding to strings for documentation. This is intended to be used for centering text in mono-spaced ASCII tables.
 /// - Parameter input: String of 7 characters or less.
 /// - Returns: A string of 7 characters, if the input string had more than 7 characters it should be unchanged.

@@ -146,20 +146,59 @@ class ChipDocumentationLoader {
     }
 
     func supplementalData(for register: SVDRegister) -> SupplementalRegisterData {
-        if let cachedData = registerCache[register.name] {
+        supplementalData(for: register, candidateKeys: [register.name], cacheKey: register.name)
+    }
+
+    func supplementalData(for register: SVDRegister, peripheral: SVDPeripheral) -> SupplementalRegisterData {
+        let candidates = scopedRegisterKeys(registerName: register.name, peripheral: peripheral)
+        return supplementalData(
+            for: register,
+            candidateKeys: candidates,
+            cacheKey: candidates.first ?? register.name
+        )
+    }
+
+    func supplementalData(for field: SVDField) -> SupplementalBitfieldData {
+        supplementalData(for: field, candidateKeys: [field.name], cacheKey: field.name)
+    }
+
+    func supplementalData(for field: SVDField, register: SVDRegister, peripheral: SVDPeripheral) -> SupplementalBitfieldData {
+        let candidates = scopedBitfieldKeys(fieldName: field.name, registerName: register.name, peripheral: peripheral)
+        return supplementalData(
+            for: field,
+            candidateKeys: candidates,
+            cacheKey: candidates.first ?? field.name
+        )
+    }
+
+    func supplementalData(for value: SVDEnumeratedValue, field: SVDField, register: SVDRegister, peripheral: SVDPeripheral) -> SupplementalEnumValueData? {
+        let candidates = scopedEnumValueKeys(fieldName: field.name, registerName: register.name, peripheral: peripheral)
+        for key in candidates {
+            guard let enumValue = chipDocumentation?.enumValues?[key]?[value.name] else {
+                continue
+            }
+
+            return enumValue.toSupplementalData()
+        }
+
+        return nil
+    }
+
+    private func supplementalData(for register: SVDRegister, candidateKeys: [String], cacheKey: String) -> SupplementalRegisterData {
+        if let cachedData = registerCache[cacheKey] {
             return cachedData
         }
 
-        let chipDocs = chipDocumentation?.registers[register.name]
-        let generalDocs = generalRegister(for: register.name)
+        let chipDocs = firstChipRegister(for: candidateKeys)
+        let generalDocs = firstGeneralRegister(for: candidateKeys)
 
         guard chipDocs != nil || generalDocs != nil else {
             let fallbackData = missingSupplementalData(for: register)
-            registerCache[register.name] = fallbackData
+            registerCache[cacheKey] = fallbackData
             return fallbackData
         }
 
-        let fallbackVariableName = getVariableName(caption: register.description ?? register.name)
+        let fallbackVariableName = swiftMemberIdentifier(from: register.displayName ?? register.name)
         let resolvedData = SupplementalRegisterData(
             variableName: preferredVariableName(chipDocs?.variableName, generalDocs?.variableName, fallback: fallbackVariableName),
             valueType: chipDocs?.valueType ?? generalDocs?.valueType ?? "",
@@ -174,25 +213,25 @@ class ChipDocumentationLoader {
             overrideGeneratedDocumentation: chipDocs?.overrideGeneratedDocumentation ?? false
         )
 
-        registerCache[register.name] = resolvedData
+        registerCache[cacheKey] = resolvedData
         return resolvedData
     }
 
-    func supplementalData(for field: SVDField) -> SupplementalBitfieldData {
-        if let cachedData = bitfieldCache[field.name] {
+    private func supplementalData(for field: SVDField, candidateKeys: [String], cacheKey: String) -> SupplementalBitfieldData {
+        if let cachedData = bitfieldCache[cacheKey] {
             return cachedData
         }
 
-        let chipDocs = chipDocumentation?.bitfields[field.name]
-        let generalDocs = generalBitfield(for: field.name)
+        let chipDocs = firstChipBitfield(for: candidateKeys)
+        let generalDocs = firstGeneralBitfield(for: candidateKeys)
 
         guard chipDocs != nil || generalDocs != nil else {
             let fallbackData = missingSupplementalData(for: field)
-            bitfieldCache[field.name] = fallbackData
+            bitfieldCache[cacheKey] = fallbackData
             return fallbackData
         }
 
-        let fallbackVariableName = getVariableName(caption: field.description ?? field.name)
+        let fallbackVariableName = swiftMemberIdentifier(from: field.name)
         let rawValueType = chipDocs?.valueType ?? generalDocs?.valueType ?? ""
         let inferredValueType = inferValueTypeIfNeeded(rawValueType, field: field)
         let resolvedData = SupplementalBitfieldData(
@@ -206,7 +245,7 @@ class ChipDocumentationLoader {
             overrideGeneratedDocumentation: chipDocs?.overrideGeneratedDocumentation ?? false
         )
 
-        bitfieldCache[field.name] = resolvedData
+        bitfieldCache[cacheKey] = resolvedData
         return resolvedData
     }
 
@@ -222,12 +261,65 @@ class ChipDocumentationLoader {
         )
     }
 
-    private func generalRegister(for alias: String) -> GeneralRegister? {
-        generalDocumentation?.registers.first { $0.aliases.contains(alias) }
+    private func firstChipRegister(for candidateKeys: [String]) -> ChipDocumentation.Register? {
+        candidateKeys.lazy.compactMap { self.chipDocumentation?.registers[$0] }.first
     }
 
-    private func generalBitfield(for alias: String) -> GeneralBitfield? {
-        generalDocumentation?.bitfields.first { $0.aliases.contains(alias) }
+    private func firstChipBitfield(for candidateKeys: [String]) -> ChipDocumentation.Bitfield? {
+        candidateKeys.lazy.compactMap { self.chipDocumentation?.bitfields[$0] }.first
+    }
+
+    private func firstGeneralRegister(for candidateKeys: [String]) -> GeneralRegister? {
+        generalDocumentation?.registers.first { register in
+            candidateKeys.contains { register.aliases.contains($0) }
+        }
+    }
+
+    private func firstGeneralBitfield(for candidateKeys: [String]) -> GeneralBitfield? {
+        generalDocumentation?.bitfields.first { bitfield in
+            candidateKeys.contains { bitfield.aliases.contains($0) }
+        }
+    }
+
+    private func scopedRegisterKeys(registerName: String, peripheral: SVDPeripheral) -> [String] {
+        uniqueKeys([
+            "\(peripheral.name).\(registerName)",
+            peripheral.groupName.map { "\($0).\(registerName)" },
+            registerName
+        ])
+    }
+
+    private func scopedBitfieldKeys(fieldName: String, registerName: String, peripheral: SVDPeripheral) -> [String] {
+        uniqueKeys([
+            "\(peripheral.name).\(registerName).\(fieldName)",
+            peripheral.groupName.map { "\($0).\(registerName).\(fieldName)" },
+            "\(registerName).\(fieldName)",
+            fieldName
+        ])
+    }
+
+    private func scopedEnumValueKeys(fieldName: String, registerName: String, peripheral: SVDPeripheral) -> [String] {
+        uniqueKeys([
+            "\(peripheral.name).\(registerName).\(fieldName)",
+            peripheral.groupName.map { "\($0).\(registerName).\(fieldName)" },
+            "\(registerName).\(fieldName)",
+            fieldName
+        ])
+    }
+
+    private func uniqueKeys(_ rawKeys: [String?]) -> [String] {
+        var seen: Set<String> = []
+        var keys: [String] = []
+
+        for rawKey in rawKeys {
+            guard let key = rawKey, seen.insert(key).inserted else {
+                continue
+            }
+
+            keys.append(key)
+        }
+
+        return keys
     }
 
     private func preferredVariableName(_ primary: String?, _ secondary: String?, fallback: String) -> String {
@@ -272,7 +364,7 @@ class ChipDocumentationLoader {
     }
 
     private func missingSupplementalData(for register: SVDRegister) -> SupplementalRegisterData {
-        let suggestedVariableName = getVariableName(caption: register.description ?? register.name)
+        let suggestedVariableName = swiftMemberIdentifier(from: register.displayName ?? register.name)
 
         let peripheralName = activePeripheralName()
         var missingRegisters = missingRegistersByPeripheral[peripheralName] ?? [:]
@@ -298,7 +390,7 @@ class ChipDocumentationLoader {
     }
 
     private func missingSupplementalData(for field: SVDField) -> SupplementalBitfieldData {
-        let suggestedVariableName = getVariableName(caption: field.description ?? field.name)
+        let suggestedVariableName = swiftMemberIdentifier(from: field.name)
 
         let peripheralName = activePeripheralName()
         var missingBitfields = missingBitfieldsByPeripheral[peripheralName] ?? [:]
@@ -318,7 +410,8 @@ class ChipDocumentationLoader {
             valueType: "",
             defaultValue: "",
             documentation: "",
-            access: accessFromSVD(field.access ?? "read-write")
+            access: accessFromSVD(field.access ?? "read-write"),
+            isMissing: true
         )
     }
 
