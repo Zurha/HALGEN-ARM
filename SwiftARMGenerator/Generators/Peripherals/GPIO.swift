@@ -53,22 +53,25 @@ private func buildGPIO(device: SVDDevice, peripheral: SVDPeripheral, subdirector
         code += "@usableFromInline let \(portName)_BASE: UInt = \(hexLiteral(groupBase, minimumDigits: 8))\n"
     }
 
+    code += buildPeripheralFunctionEnum()
+    
     code += """
-
+    
     struct GPIO {
         private init() {}
-
+    
     """
-
+    
     for groupIndex in 0..<groupCount {
+        let portName = portTypeName(for: groupIndex)
         code += buildPortGroup(
-            name: portTypeName(for: groupIndex),
+            name: portName,
             groupIndex: groupIndex,
             registers: registers,
             documentation: documentation
         )
     }
-
+    
     code += buildPads(groupCount: groupCount)
     code += "}\n"
 
@@ -97,9 +100,7 @@ private func isGPIORegister(_ register: SVDRegister) -> Bool {
         "OUTTGL",
         "IN",
         "CTRL",
-        "WRCONFIG",
-        "PMUX0",
-        "PINCFG0"
+        "WRCONFIG"
     ].contains(normalizedRegisterName(register.name))
 }
 
@@ -153,6 +154,8 @@ private func buildPortGroup(name portName: String, groupIndex: Int, registers: [
         )
     }
 
+    code += buildPortGroupHelpers(portName: portName)
+
     code += """
         }
 
@@ -197,7 +200,8 @@ private func buildRegisterProperty(
 
     let registerName = displayRegisterName(register.name, elementIndex: elementIndex)
     let suppData = documentation?.supplementalData(for: register)
-    let variableName = suppData?.variableName ?? gpioRegisterVariableName(for: register, elementIndex: elementIndex) ?? ""
+    let canonicalName = gpioRegisterVariableName(for: register, elementIndex: elementIndex)
+    let variableName = canonicalName ?? suppData?.variableName ?? ""
     guard variableName.isEmpty == false else {
         return ""
     }
@@ -368,4 +372,81 @@ private func gpioRegisterVariableName(for register: SVDRegister, elementIndex: I
     default:
         return nil
     }
+}
+
+// MARK: - Peripheral Function Enum
+
+private func buildPeripheralFunctionEnum() -> String {
+    """
+    /// Peripheral function selection for PORT pin multiplexing.
+    /// Each pin can be configured to use one of up to 8 peripheral functions (A through H).
+    enum PeripheralFunction: UInt8 {
+        case a = 0
+        case b = 1
+        case c = 2
+        case d = 3
+        case e = 4
+        case f = 5
+        case g = 6
+        case h = 7
+    }
+
+
+    """
+}
+
+// MARK: - Port Group Helper Functions (emitted inside each port group struct)
+
+private func buildPortGroupHelpers(portName: String) -> String {
+    """
+            /// Set the peripheral multiplexer function for a pin.
+            /// - Parameters:
+            ///   - pin: Pin number (0-31).
+            ///   - function: Peripheral function to assign.
+            @inlinable @inline(__always)
+            static func setPeripheralMux(pin: UInt32, function: PeripheralFunction) {
+                let pmuxIndex = pin / 2
+                let isEven = pin % 2 == 0
+                let addr = UnsafeMutablePointer<UInt8>(bitPattern: \(portName)_BASE + 0x30 + UInt(pmuxIndex))!
+                let current = addr.pointee
+                if isEven {
+                    addr.pointee = (current & 0xF0) | function.rawValue
+                } else {
+                    addr.pointee = (current & 0x0F) | (function.rawValue << 4)
+                }
+            }
+
+            /// Enable or disable the peripheral multiplexer for a pin.
+            @inlinable @inline(__always)
+            static func setPeripheralMuxEnable(pin: UInt32, enabled: Bool) {
+                let addr = UnsafeMutablePointer<UInt8>(bitPattern: \(portName)_BASE + 0x40 + UInt(pin))!
+                let current = addr.pointee
+                if enabled {
+                    addr.pointee = current | 0x01
+                } else {
+                    addr.pointee = current & ~0x01
+                }
+            }
+
+            /// Enable or disable the input buffer for a pin.
+            @inlinable @inline(__always)
+            static func setInputEnable(pin: UInt32, enabled: Bool) {
+                let addr = UnsafeMutablePointer<UInt8>(bitPattern: \(portName)_BASE + 0x40 + UInt(pin))!
+                let current = addr.pointee
+                if enabled {
+                    addr.pointee = current | 0x02
+                } else {
+                    addr.pointee = current & ~0x02
+                }
+            }
+
+            /// Configure a pin for peripheral use with the given function and input enable setting.
+            @inlinable @inline(__always)
+            static func configureForPeripheral(pin: UInt32, function: PeripheralFunction, inputEnable: Bool) {
+                setPeripheralMux(pin: pin, function: function)
+                setInputEnable(pin: pin, enabled: inputEnable)
+                setPeripheralMuxEnable(pin: pin, enabled: true)
+            }
+
+    """
 }

@@ -98,6 +98,8 @@ private func buildSERCOMInstance(
         )
     }
 
+    code += sercomResetHelper(baseName: baseName)
+
     code += "}\n"
 
     return GeneratedCodeFile(fileName: fileName, content: code, subdirectory: subdirectory)
@@ -357,6 +359,7 @@ private func buildSERCOMBitfieldAccessors(
             continue
         }
 
+        let fieldIsWriteOnly = field.access == "write-only"
         let accessorName = bitfieldAccessorName(
             registerVariableName: parentVariableName,
             fieldName: field.name,
@@ -365,7 +368,7 @@ private func buildSERCOMBitfieldAccessors(
             registerName: register.name
         )
         let accessorType = svdBitfieldAccessorType(bitWidth: bitWidth)
-        let getter = "get { \(svdBitfieldGetterExpression(parentExpression: parentExpression, bitOffset: bitOffset, bitWidth: bitWidth)) }"
+        let getter = fieldIsWriteOnly ? nil : "get { \(svdBitfieldGetterExpression(parentExpression: parentExpression, bitOffset: bitOffset, bitWidth: bitWidth)) }"
         let setter = sercomBuildBitfieldSetter(
             field: field,
             bitOffset: bitOffset,
@@ -384,14 +387,39 @@ private func buildSERCOMBitfieldAccessors(
             fieldDocumentation = "/// \(field.description ?? field.name)"
         }
 
-        code += """
-        \(spaces)\(fieldDocumentation)
-        \(spaces)@inlinable @inline(__always)
-        \(spaces)static var \(accessorName): \(accessorType) {
-        \(spaces)    \(getter)
-        \(setter.map { "\(spaces)    \($0)\n" } ?? "")\(spaces)}
+        // Write-only fields must be emitted as static methods (Swift forbids setter-only properties).
+        if fieldIsWriteOnly, let setterBody = setter {
+            let methodName = "write" + accessorName.prefix(1).uppercased() + accessorName.dropFirst()
+            // Strip "set { " prefix and trailing " }" to get raw expression body,
+            // and replace implicit "newValue" with explicit "value" parameter.
+            var body = setterBody
+            if body.hasPrefix("set { ") {
+                body = String(body.dropFirst(6))
+            }
+            if body.hasSuffix(" }") {
+                body = String(body.dropLast(2))
+            } else if body.hasSuffix("}") {
+                body = String(body.dropLast(1))
+            }
+            body = body.replacingOccurrences(of: "newValue", with: "value")
+            let paramDecl = accessorType == "Bool" ? "_ value: Bool" : "_ value: \(accessorType)"
+            code += """
+            \(spaces)\(fieldDocumentation)
+            \(spaces)@inlinable @inline(__always)
+            \(spaces)static func \(methodName)(\(paramDecl)) {
+            \(svdIndent(body, by: indentation + 8))
+            \(spaces)}
 
-        """
+            """
+        } else {
+            code += """
+            \(spaces)\(fieldDocumentation)
+            \(spaces)@inlinable @inline(__always)
+            \(spaces)static var \(accessorName): \(accessorType) {
+            \(getter.map { "\(spaces)    \($0)\n" } ?? "")\(setter.map { "\(spaces)    \($0)\n" } ?? "")\(spaces)}
+
+            """
+        }
     }
 
     return code
@@ -421,6 +449,16 @@ private func sercomBuildBitfieldSetter(
             fieldOffset: bitOffset,
             fieldWidth: bitWidth
         )
+    }
+
+    // Write-only fields: no getter (handled by caller), but setter uses parent RMW
+    // to avoid clobbering adjacent readable fields in the same register.
+    if field.access == "write-only" {
+        if bitWidth == 1 {
+            return "set { \(parentExpression) = (\(parentExpression) & ~(UInt32(1) << \(bitOffset))) | (newValue ? UInt32(1) << \(bitOffset) : 0) }"
+        }
+        let mask = hexLiteral((UInt64(1) << UInt64(bitWidth)) - 1)
+        return "set { \(parentExpression) = (\(parentExpression) & ~(UInt32(\(mask)) << \(bitOffset))) | ((newValue & \(mask)) << \(bitOffset)) }"
     }
 
     if bitWidth == 1 {
@@ -457,7 +495,7 @@ private func sercomRegisterAddressExpression(baseName: String, offset: UInt64) -
 
 private func sercomWriteBehavior(for register: SVDRegister) -> SVDRegisterWriteBehavior {
     switch cleanedSVDName(register.name) {
-    case "INTFLAG", "STATUS":
+    case "INTFLAG":
         return .writeOneToClear
     default:
         return .normal
@@ -546,4 +584,22 @@ private func bitfieldAccessorName(
     }
 
     return "\(registerVariableName)\(swiftUpperCamelIdentifier(from: cleanedFieldName))"
+}
+
+private func sercomResetHelper(baseName: String) -> String {
+    """
+        /// Software reset this SERCOM peripheral using direct volatile register access.
+        ///
+        /// Bypasses read-modify-write on CTRLA during the reset synchronization window
+        /// so that the hardware reset sequence completes reliably.
+        @inlinable @inline(__always)
+        static func reset() {
+            _volatileRegisterWriteUInt32(\(baseName), 0)
+            while (_volatileRegisterReadUInt32(\(baseName) + 0x1C) & (UInt32(1) << 1)) != 0 {}
+            _volatileRegisterWriteUInt32(\(baseName), UInt32(1))
+            while (_volatileRegisterReadUInt32(\(baseName) + 0x1C) & UInt32(1)) != 0
+                || (_volatileRegisterReadUInt32(\(baseName)) & UInt32(1)) != 0 {}
+        }
+
+    """
 }

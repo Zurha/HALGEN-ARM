@@ -104,6 +104,7 @@ private func buildGCLKFile(
         )
     }
 
+    code += gclkRouteGeneratorHelper()
     code += "}\n"
 
     return GeneratedCodeFile(fileName: fileName, content: code, subdirectory: "module")
@@ -337,4 +338,32 @@ private func gclkEnumCaseDocumentation(
     }
 
     return value.description ?? value.name
+}
+
+// MARK: - Route Generator Helper
+
+private func gclkRouteGeneratorHelper() -> String {
+    """
+        // MARK: - Helper
+
+        /// Route a Generic Clock Generator to a peripheral clock input and wait for synchronization.
+        ///
+        /// This writes CLKCTRL with the specified peripheral clock ID, generator selection,
+        /// and clock enable via a volatile 16-bit store, then waits for CLKCTRL
+        /// synchronization to complete.
+        ///
+        /// - Parameters:
+        ///   - id: The peripheral clock input to configure.
+        ///   - generator: The Generic Clock Generator to route to the peripheral.
+        ///   - enable: Whether to enable the clock. Defaults to `true`.
+        @inlinable @inline(__always)
+        static func routeGenerator(id: PeripheralClockID, generator: Generator, enable: Bool = true) {
+            let genVal = generator.rawValue << 8
+            let enableVal: UInt32 = enable ? (UInt32(1) << 14) : 0
+            let value = id.rawValue | genVal | enableVal
+            _volatileRegisterWriteUInt16(GCLK_BASE + 0x02, UInt16(value & 0xFFFF))
+            while synchronizationBusy {}
+        }
+
+    """
 }
